@@ -5,6 +5,11 @@ const MAX_FORCE = 0.045;
 const NEIGHBOR_RADIUS = 58;
 const SEPARATION_RADIUS = 24;
 const TRAIL_DURATION = 3000;
+const SPARKLE_PROBABILITY = 0.22;
+const MAX_TRAIL_SEGMENT_DISTANCE = 120;
+const MIN_SPARKLE_OPACITY = 0.12;
+const MIN_SPARKLE_RADIUS = 0.8;
+const SPARKLE_RADIUS_RANGE = 1.5;
 
 const hexToRgba = (hex, alpha) => {
   const normalized = hex.replace('#', '');
@@ -101,7 +106,7 @@ class Boid {
       x: this.x,
       y: this.y,
       createdAt: now,
-      sparkle: Math.random() < 0.22
+      sparkle: Math.random() < SPARKLE_PROBABILITY
     });
     this.trail = this.trail.filter((point) => now - point.createdAt <= TRAIL_DURATION);
 
@@ -125,7 +130,7 @@ class Boid {
       const age = now - current.createdAt;
       const opacity = Math.max(0, 1 - age / TRAIL_DURATION);
       const distance = Math.hypot(current.x - previous.x, current.y - previous.y);
-      if (distance > 120) continue;
+      if (distance > MAX_TRAIL_SEGMENT_DISTANCE) continue;
 
       ctx.beginPath();
       ctx.moveTo(previous.x, previous.y);
@@ -136,10 +141,10 @@ class Boid {
       ctx.shadowBlur = 12 * opacity;
       ctx.stroke();
 
-      if (current.sparkle && opacity > 0.12) {
+      if (current.sparkle && opacity > MIN_SPARKLE_OPACITY) {
         ctx.beginPath();
         ctx.fillStyle = `rgba(255, 255, 255, ${0.75 * opacity})`;
-        ctx.arc(current.x, current.y, 0.8 + Math.random() * 1.5, 0, Math.PI * 2);
+        ctx.arc(current.x, current.y, MIN_SPARKLE_RADIUS + Math.random() * SPARKLE_RADIUS_RANGE, 0, Math.PI * 2);
         ctx.fill();
       }
     }
