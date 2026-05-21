@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QuizBuddy | Tense Trainer</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <canvas id="boids-canvas" class="app__canvas" aria-hidden="true"></canvas>
+
+    <div id="loading-screen" class="loading-screen" role="status" aria-live="polite">
+      <div class="loading-screen__spinner" aria-hidden="true"></div>
+      <p class="loading-screen__text">Loading QuizBuddy...</p>
+    </div>
+
+    <main class="app" aria-label="QuizBuddy tense practice app">
+      <section id="welcome-modal" class="modal modal--visible" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+        <div class="modal__panel">
+          <h1 id="welcome-title" class="modal__title">Welcome to QuizBuddy</h1>
+          <p class="modal__text">Practice tense recognition across Easy, Medium, and Advance levels. Read each sentence and choose whether the target tense is Past, Present, or Future.</p>
+          <button id="start-btn" class="btn btn--primary" type="button">Start Learning</button>
+          <footer class="modal__footer">Credit: Teacher Evan</footer>
+        </div>
+      </section>
+
+      <section id="level-select" class="panel panel--hidden" aria-label="Level selection">
+        <h2 class="panel__title">Select a Level</h2>
+        <div class="panel__actions">
+          <button class="btn btn--level" type="button" data-level="easy">Easy</button>
+          <button class="btn btn--level" type="button" data-level="medium">Medium</button>
+          <button class="btn btn--level" type="button" data-level="advance">Advance</button>
+        </div>
+      </section>
+
+      <section id="game" class="game panel panel--hidden" aria-live="polite">
+        <header class="game__header">
+          <p class="game__meta" id="level-label">Level: -</p>
+          <p class="game__meta" id="question-counter">Question: 0/0</p>
+          <p class="game__meta" id="score-counter">Score: 0</p>
+        </header>
+
+        <article class="game__card" id="game-card">
+          <p id="sentence" class="game__sentence">Choose a level to begin.</p>
+          <div class="game__actions" role="group" aria-label="Select tense">
+            <button type="button" class="btn btn--answer" data-tense="past">Past</button>
+            <button type="button" class="btn btn--answer" data-tense="present">Present</button>
+            <button type="button" class="btn btn--answer" data-tense="future">Future</button>
+          </div>
+          <p id="feedback" class="game__feedback"></p>
+          <div id="burst" class="game__burst" aria-hidden="true"></div>
+        </article>
+
+        <div class="panel__actions">
+          <button id="change-level-btn" class="btn" type="button">Change Level</button>
+          <button id="reset-scores-btn" class="btn" type="button">Reset Scores</button>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>
