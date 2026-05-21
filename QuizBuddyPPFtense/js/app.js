@@ -55,7 +55,7 @@ const renderQuestion = () => {
 
   if (!question) {
     sentenceEl.textContent = `Great work! You completed the ${LEVEL_LABELS[state.currentLevel]} level.`;
-    feedbackEl.textContent = `Pick another level or reset your scores to continue practicing. Best streak: ${state.bestStreak}.`;
+    feedbackEl.textContent = 'Pick another level or reset your scores to continue practicing.';
     answerButtons.forEach((button) => {
       button.disabled = true;
       button.style.opacity = '0.65';
