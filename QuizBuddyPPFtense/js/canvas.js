@@ -1,31 +1,36 @@
-const BOID_COUNT = 120;
+const BOID_COUNT = 60;
 const COLORS = ['#7fb5ff', '#84e6c3', '#c9a0ff', '#ffd166', '#ff7aa2', '#6ef7f1'];
 const MAX_SPEED = 2.1;
 const MAX_FORCE = 0.045;
 const NEIGHBOR_RADIUS = 58;
 const SEPARATION_RADIUS = 24;
-const TRAIL_DURATION = 3000;
-const SPARKLE_PROBABILITY = 0.22;
+const TRAIL_DURATION = 1500;
+const MAX_TRAIL_POINTS = 90;
+const SPARKLE_PROBABILITY = 0.08;
 const MAX_TRAIL_SEGMENT_DISTANCE = 120;
 const MIN_SPARKLE_OPACITY = 0.12;
 const MIN_SPARKLE_RADIUS = 0.8;
 const SPARKLE_RADIUS_RANGE = 1.5;
+const SHADOW_BLUR = 8;
 
-const hexToRgba = (hex, alpha) => {
+// Pre-parse hex colors once at module load to avoid per-frame string parsing
+const COLORS_RGB = COLORS.map((hex) => {
   const normalized = hex.replace('#', '');
-  const r = parseInt(normalized.slice(0, 2), 16);
-  const g = parseInt(normalized.slice(2, 4), 16);
-  const b = parseInt(normalized.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-};
+  return {
+    r: parseInt(normalized.slice(0, 2), 16),
+    g: parseInt(normalized.slice(2, 4), 16),
+    b: parseInt(normalized.slice(4, 6), 16),
+  };
+});
 
 class Boid {
-  constructor(width, height, color) {
+  constructor(width, height, colorIndex) {
     this.x = Math.random() * width;
     this.y = Math.random() * height;
     this.vx = (Math.random() * 2 - 1) * 1.5;
     this.vy = (Math.random() * 2 - 1) * 1.5;
-    this.color = color;
+    this.color = COLORS[colorIndex];
+    this.rgb = COLORS_RGB[colorIndex];
     this.trail = [];
   }
 
@@ -109,7 +114,18 @@ class Boid {
       sparkle: Math.random() < SPARKLE_PROBABILITY,
       sparkleRadius: MIN_SPARKLE_RADIUS + Math.random() * SPARKLE_RADIUS_RANGE
     });
-    this.trail = this.trail.filter((point) => now - point.createdAt <= TRAIL_DURATION);
+
+    // Remove expired points from the front without creating a new array
+    let expired = 0;
+    while (expired < this.trail.length && now - this.trail[expired].createdAt > TRAIL_DURATION) {
+      expired += 1;
+    }
+    if (expired > 0) this.trail.splice(0, expired);
+
+    // Hard-cap to bound memory usage on high-refresh-rate displays
+    if (this.trail.length > MAX_TRAIL_POINTS) {
+      this.trail.splice(0, this.trail.length - MAX_TRAIL_POINTS);
+    }
 
     this.x += this.vx;
     this.y += this.vy;
@@ -125,6 +141,13 @@ class Boid {
       return;
     }
 
+    const { r, g, b } = this.rgb;
+
+    // Set shadow state once per boid instead of per segment
+    ctx.save();
+    ctx.shadowColor = this.color;
+    ctx.shadowBlur = SHADOW_BLUR;
+
     for (let i = 1; i < this.trail.length; i += 1) {
       const previous = this.trail[i - 1];
       const current = this.trail[i];
@@ -137,18 +160,20 @@ class Boid {
       ctx.moveTo(previous.x, previous.y);
       ctx.lineTo(current.x, current.y);
       ctx.lineWidth = 2.6 * opacity;
-      ctx.strokeStyle = hexToRgba(this.color, 0.5 * opacity);
-      ctx.shadowColor = this.color;
-      ctx.shadowBlur = 12 * opacity;
+      ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${0.5 * opacity})`;
       ctx.stroke();
 
       if (current.sparkle && opacity > MIN_SPARKLE_OPACITY) {
+        ctx.shadowBlur = 0;
         ctx.beginPath();
         ctx.fillStyle = `rgba(255, 255, 255, ${0.75 * opacity})`;
         ctx.arc(current.x, current.y, current.sparkleRadius, 0, Math.PI * 2);
         ctx.fill();
+        ctx.shadowBlur = SHADOW_BLUR;
       }
     }
+
+    ctx.restore();
   }
 
   draw(ctx) {
@@ -159,7 +184,7 @@ class Boid {
     ctx.translate(this.x, this.y);
     ctx.rotate(angle);
     ctx.shadowColor = this.color;
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = SHADOW_BLUR;
     ctx.beginPath();
     ctx.moveTo(size, 0);
     ctx.lineTo(-size, size * 0.6);
@@ -177,15 +202,23 @@ export const initCanvas = (canvas) => {
     return;
   }
 
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  let resizeTimer;
   const resize = () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }, 100);
   };
 
-  resize();
   window.addEventListener('resize', resize);
 
-  const boids = Array.from({ length: BOID_COUNT }, (_, index) => new Boid(canvas.width, canvas.height, COLORS[index % COLORS.length]));
+  const boids = Array.from({ length: BOID_COUNT }, (_, index) => new Boid(canvas.width, canvas.height, index % COLORS.length));
+
+  let animationId;
 
   const animate = () => {
     const now = performance.now();
@@ -198,8 +231,22 @@ export const initCanvas = (canvas) => {
       boids[i].draw(ctx);
     }
 
-    window.requestAnimationFrame(animate);
+    animationId = window.requestAnimationFrame(animate);
   };
+
+  // Pause the animation loop when the tab is not visible to save CPU/GPU
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      cancelAnimationFrame(animationId);
+    } else {
+      // Clear stale trail points accumulated while hidden to avoid
+      // incorrect opacity calculations on resume
+      for (let i = 0; i < boids.length; i += 1) {
+        boids[i].trail.length = 0;
+      }
+      animate();
+    }
+  });
 
   animate();
 };
