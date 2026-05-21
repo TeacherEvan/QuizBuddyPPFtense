@@ -28,6 +28,7 @@ const answerButtons = Array.from(document.querySelectorAll('[data-option]'));
 const changeLevelBtn = document.getElementById('change-level-btn');
 const resetScoresBtn = document.getElementById('reset-scores-btn');
 const canvas = document.getElementById('boids-canvas');
+const pluralize = (count, singular) => `${count} ${singular}${count === 1 ? '' : 's'}`;
 
 const updateHud = () => {
   const state = getState();
@@ -103,8 +104,8 @@ const handleAnswer = (selectedOption) => {
     const reward = addPoint();
     gameCard.classList.add('game--correct');
     feedbackEl.classList.add('feedback--success');
-    const bonusText = reward.bonus ? ` including ${reward.bonus} bonus point${reward.bonus > 1 ? 's' : ''}` : '';
-    feedbackEl.textContent = `Correct! "${question.correct}" fits the sentence. +${reward.earned} point${reward.earned > 1 ? 's' : ''}${bonusText} (streak ${reward.streak}).`;
+    const bonusText = reward.bonus ? ` including ${reward.bonus} bonus point` : '';
+    feedbackEl.textContent = `Correct! "${question.correct}" fits the sentence. +${pluralize(reward.earned, 'point')}${bonusText} (streak ${reward.streak}).`;
   } else {
     resetStreak();
     gameCard.classList.add('game--incorrect');
