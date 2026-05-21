@@ -106,7 +106,8 @@ class Boid {
       x: this.x,
       y: this.y,
       createdAt: now,
-      sparkle: Math.random() < SPARKLE_PROBABILITY
+      sparkle: Math.random() < SPARKLE_PROBABILITY,
+      sparkleRadius: MIN_SPARKLE_RADIUS + Math.random() * SPARKLE_RADIUS_RANGE
     });
     this.trail = this.trail.filter((point) => now - point.createdAt <= TRAIL_DURATION);
 
@@ -144,7 +145,7 @@ class Boid {
       if (current.sparkle && opacity > MIN_SPARKLE_OPACITY) {
         ctx.beginPath();
         ctx.fillStyle = `rgba(255, 255, 255, ${0.75 * opacity})`;
-        ctx.arc(current.x, current.y, MIN_SPARKLE_RADIUS + Math.random() * SPARKLE_RADIUS_RANGE, 0, Math.PI * 2);
+        ctx.arc(current.x, current.y, current.sparkleRadius, 0, Math.PI * 2);
         ctx.fill();
       }
     }
