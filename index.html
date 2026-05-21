@@ -18,7 +18,7 @@
       <section id="welcome-modal" class="modal modal--visible" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
         <div class="modal__panel">
           <h1 id="welcome-title" class="modal__title">Welcome to QuizBuddy</h1>
-          <p class="modal__text">Practice tense recognition across Easy, Medium, and Advance levels. Read each sentence and choose whether the target tense is Past, Present, or Future.</p>
+          <p class="modal__text">Practice tense recognition across Easy, Medium, and Advance levels. Read each sentence and select the missing word that correctly completes it.</p>
           <button id="start-btn" class="btn btn--primary" type="button">Start Learning</button>
           <footer class="modal__footer">Credit: Teacher Evan</footer>
         </div>
@@ -38,14 +38,16 @@
           <p class="game__meta" id="level-label">Level: -</p>
           <p class="game__meta" id="question-counter">Question: 0/0</p>
           <p class="game__meta" id="score-counter">Score: 0</p>
+          <p class="game__meta" id="streak-counter">Streak: 0</p>
+          <p class="game__meta" id="best-streak-counter">Best Streak: 0</p>
         </header>
 
         <article class="game__card" id="game-card">
           <p id="sentence" class="game__sentence">Choose a level to begin.</p>
-          <div class="game__actions" role="group" aria-label="Select tense">
-            <button type="button" class="btn btn--answer" data-tense="past">Past</button>
-            <button type="button" class="btn btn--answer" data-tense="present">Present</button>
-            <button type="button" class="btn btn--answer" data-tense="future">Future</button>
+          <div class="game__actions" role="group" aria-label="Select missing word">
+            <button type="button" class="btn btn--answer" data-option=""></button>
+            <button type="button" class="btn btn--answer" data-option=""></button>
+            <button type="button" class="btn btn--answer" data-option=""></button>
           </div>
           <p id="feedback" class="game__feedback"></p>
           <div id="burst" class="game__burst" aria-hidden="true"></div>

@@ -1,9 +1,18 @@
 const BOID_COUNT = 120;
-const COLORS = ['#7fb5ff', '#84e6c3', '#c9a0ff'];
+const COLORS = ['#7fb5ff', '#84e6c3', '#c9a0ff', '#ffd166', '#ff7aa2', '#6ef7f1'];
 const MAX_SPEED = 2.1;
 const MAX_FORCE = 0.045;
 const NEIGHBOR_RADIUS = 58;
 const SEPARATION_RADIUS = 24;
+const TRAIL_DURATION = 3000;
+
+const hexToRgba = (hex, alpha) => {
+  const normalized = hex.replace('#', '');
+  const r = parseInt(normalized.slice(0, 2), 16);
+  const g = parseInt(normalized.slice(2, 4), 16);
+  const b = parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
 
 class Boid {
   constructor(width, height, color) {
@@ -12,6 +21,7 @@ class Boid {
     this.vx = (Math.random() * 2 - 1) * 1.5;
     this.vy = (Math.random() * 2 - 1) * 1.5;
     this.color = color;
+    this.trail = [];
   }
 
   limitSpeed() {
@@ -86,7 +96,15 @@ class Boid {
     this.limitSpeed();
   }
 
-  move(width, height) {
+  move(width, height, now) {
+    this.trail.push({
+      x: this.x,
+      y: this.y,
+      createdAt: now,
+      sparkle: Math.random() < 0.22
+    });
+    this.trail = this.trail.filter((point) => now - point.createdAt <= TRAIL_DURATION);
+
     this.x += this.vx;
     this.y += this.vy;
 
@@ -96,6 +114,37 @@ class Boid {
     if (this.y > height) this.y = 0;
   }
 
+  drawTrail(ctx, now) {
+    if (this.trail.length < 2) {
+      return;
+    }
+
+    for (let i = 1; i < this.trail.length; i += 1) {
+      const previous = this.trail[i - 1];
+      const current = this.trail[i];
+      const age = now - current.createdAt;
+      const opacity = Math.max(0, 1 - age / TRAIL_DURATION);
+      const distance = Math.hypot(current.x - previous.x, current.y - previous.y);
+      if (distance > 120) continue;
+
+      ctx.beginPath();
+      ctx.moveTo(previous.x, previous.y);
+      ctx.lineTo(current.x, current.y);
+      ctx.lineWidth = 2.6 * opacity;
+      ctx.strokeStyle = hexToRgba(this.color, 0.5 * opacity);
+      ctx.shadowColor = this.color;
+      ctx.shadowBlur = 12 * opacity;
+      ctx.stroke();
+
+      if (current.sparkle && opacity > 0.12) {
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.75 * opacity})`;
+        ctx.arc(current.x, current.y, 0.8 + Math.random() * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
   draw(ctx) {
     const angle = Math.atan2(this.vy, this.vx);
     const size = 6;
@@ -103,6 +152,8 @@ class Boid {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(angle);
+    ctx.shadowColor = this.color;
+    ctx.shadowBlur = 12;
     ctx.beginPath();
     ctx.moveTo(size, 0);
     ctx.lineTo(-size, size * 0.6);
@@ -131,11 +182,13 @@ export const initCanvas = (canvas) => {
   const boids = Array.from({ length: BOID_COUNT }, (_, index) => new Boid(canvas.width, canvas.height, COLORS[index % COLORS.length]));
 
   const animate = () => {
+    const now = performance.now();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     for (let i = 0; i < boids.length; i += 1) {
       boids[i].applyRules(boids);
-      boids[i].move(canvas.width, canvas.height);
+      boids[i].move(canvas.width, canvas.height, now);
+      boids[i].drawTrail(ctx, now);
       boids[i].draw(ctx);
     }
 

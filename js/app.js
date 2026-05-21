@@ -1,5 +1,5 @@
 import { QUESTIONS } from './data.js';
-import { addPoint, getState, incrementIndex, loadScores, resetIndex, resetScores, setLevel } from './state.js';
+import { addPoint, getState, incrementIndex, loadScores, resetIndex, resetScores, resetStreak, setLevel } from './state.js';
 import { initCanvas } from './canvas.js';
 
 const LEVEL_LABELS = {
@@ -22,7 +22,9 @@ const feedbackEl = document.getElementById('feedback');
 const levelLabelEl = document.getElementById('level-label');
 const questionCounterEl = document.getElementById('question-counter');
 const scoreCounterEl = document.getElementById('score-counter');
-const answerButtons = Array.from(document.querySelectorAll('[data-tense]'));
+const streakCounterEl = document.getElementById('streak-counter');
+const bestStreakCounterEl = document.getElementById('best-streak-counter');
+const answerButtons = Array.from(document.querySelectorAll('[data-option]'));
 const changeLevelBtn = document.getElementById('change-level-btn');
 const resetScoresBtn = document.getElementById('reset-scores-btn');
 const canvas = document.getElementById('boids-canvas');
@@ -35,6 +37,8 @@ const updateHud = () => {
   levelLabelEl.textContent = `Level: ${LEVEL_LABELS[state.currentLevel]}`;
   questionCounterEl.textContent = `Question: ${displayIndex}/${questions.length}`;
   scoreCounterEl.textContent = `Score: ${state.scores[state.currentLevel]}`;
+  streakCounterEl.textContent = `Streak: ${state.currentStreak}`;
+  bestStreakCounterEl.textContent = `Best Streak: ${state.bestStreak}`;
 };
 
 const clearFeedbackState = () => {
@@ -51,7 +55,7 @@ const renderQuestion = () => {
 
   if (!question) {
     sentenceEl.textContent = `Great work! You completed the ${LEVEL_LABELS[state.currentLevel]} level.`;
-    feedbackEl.textContent = 'Pick another level or reset your scores to continue practicing.';
+    feedbackEl.textContent = `Pick another level or reset your scores to continue practicing. Best streak: ${state.bestStreak}.`;
     answerButtons.forEach((button) => {
       button.disabled = true;
       button.style.opacity = '0.65';
@@ -62,7 +66,10 @@ const renderQuestion = () => {
 
   sentenceEl.textContent = question.sentence;
   feedbackEl.textContent = '';
-  answerButtons.forEach((button) => {
+  answerButtons.forEach((button, index) => {
+    const option = question.options[index];
+    button.textContent = option || '';
+    button.dataset.option = option || '';
     button.disabled = false;
     button.style.opacity = '1';
   });
@@ -81,7 +88,7 @@ const showLevelSelect = () => {
   levelSelect.classList.remove('panel--hidden');
 };
 
-const handleAnswer = (selectedTense) => {
+const handleAnswer = (selectedOption) => {
   const state = getState();
   const questions = getQuestionsByLevel(state.currentLevel);
   const question = questions[state.currentIndex];
@@ -92,15 +99,16 @@ const handleAnswer = (selectedTense) => {
 
   clearFeedbackState();
 
-  if (selectedTense === question.tense) {
-    addPoint();
+  if (selectedOption === question.correct) {
+    const reward = addPoint();
     gameCard.classList.add('game--correct');
     feedbackEl.classList.add('feedback--success');
-    feedbackEl.textContent = `Correct! "${question.correct}" is ${question.tense} tense.`;
+    feedbackEl.textContent = `Correct! "${question.correct}" fits the sentence. +${reward.earned} point${reward.earned > 1 ? 's' : ''} (streak ${reward.streak}).`;
   } else {
+    resetStreak();
     gameCard.classList.add('game--incorrect');
     feedbackEl.classList.add('feedback--error');
-    feedbackEl.textContent = `Not quite. Correct answer: "${question.correct}" (${question.tense}).`;
+    feedbackEl.textContent = `Not quite. Correct answer: "${question.correct}" (${question.tense} tense).`;
   }
 
   updateHud();
@@ -126,7 +134,7 @@ const setupEvents = () => {
   });
 
   answerButtons.forEach((button) => {
-    button.addEventListener('click', () => handleAnswer(button.dataset.tense));
+    button.addEventListener('click', () => handleAnswer(button.dataset.option));
   });
 
   changeLevelBtn.addEventListener('click', () => {
