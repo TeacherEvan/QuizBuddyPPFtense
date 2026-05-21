@@ -103,7 +103,8 @@ const handleAnswer = (selectedOption) => {
     const reward = addPoint();
     gameCard.classList.add('game--correct');
     feedbackEl.classList.add('feedback--success');
-    feedbackEl.textContent = `Correct! "${question.correct}" fits the sentence. +${reward.earned} point${reward.earned > 1 ? 's' : ''} (streak ${reward.streak}).`;
+    const bonusText = reward.bonus ? ` including ${reward.bonus} bonus point${reward.bonus > 1 ? 's' : ''}` : '';
+    feedbackEl.textContent = `Correct! "${question.correct}" fits the sentence. +${reward.earned} point${reward.earned > 1 ? 's' : ''}${bonusText} (streak ${reward.streak}).`;
   } else {
     resetStreak();
     gameCard.classList.add('game--incorrect');
