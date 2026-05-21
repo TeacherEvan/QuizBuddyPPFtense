@@ -109,7 +109,7 @@ const handleAnswer = (selectedOption) => {
     resetStreak();
     gameCard.classList.add('game--incorrect');
     feedbackEl.classList.add('feedback--error');
-    feedbackEl.textContent = `Not quite. Correct answer: "${question.correct}" (${question.tense} tense).`;
+    feedbackEl.textContent = `Not quite. The correct missing word is "${question.correct}".`;
   }
 
   updateHud();
