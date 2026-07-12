@@ -34,10 +34,7 @@ const safeParse = (rawValue) => {
       };
     }
   } catch {
-    return {
-      scores: { ...defaultScores },
-      bestStreak: 0
-    };
+    // malformed JSON — fall through to default below
   }
   return {
     scores: { ...defaultScores },
@@ -83,7 +80,7 @@ export const getState = () => ({
 
 export const setLevel = (level) => {
   state.currentLevel = level;
-  state.currentIndex = 0;
+  resetIndex();
 };
 
 export const incrementIndex = () => {

@@ -9,8 +9,6 @@ import {
   resetStreak,
   setLevel
 } from './state.js';
-import { initCanvas } from './canvas.js';
-
 const LEVEL_LABELS = {
   easy: 'Easy',
   medium: 'Medium',
@@ -22,7 +20,6 @@ const getQuestionsForCurrentLevel = () => {
   return QUESTIONS.filter((question) => question.level === currentLevel);
 };
 
-const loadingScreen = document.getElementById('loading-screen');
 const welcomeModal = document.getElementById('welcome-modal');
 const startBtn = document.getElementById('start-btn');
 const levelSelect = document.getElementById('level-select');
@@ -39,13 +36,19 @@ const bestStreakCounterEl = document.getElementById('best-streak-counter');
 const answerButtons = Array.from(document.querySelectorAll('[data-option]'));
 const changeLevelBtn = document.getElementById('change-level-btn');
 const resetScoresBtn = document.getElementById('reset-scores-btn');
-const canvas = document.getElementById('boids-canvas');
 const pluralize = (count, singular) => `${count} ${singular}${count === 1 ? '' : 's'}`;
 
 // Handle for the deferred question-advance timer so it can be cancelled if the
 // user navigates away (change level / reset) before it fires. Without this, a
 // pending advance would silently skip the first question of the new level.
 let pendingAdvanceTimer = null;
+
+const cancelPendingAdvance = () => {
+  if (pendingAdvanceTimer !== null) {
+    window.clearTimeout(pendingAdvanceTimer);
+    pendingAdvanceTimer = null;
+  }
+};
 
 const updateHud = () => {
   const state = getState();
@@ -165,10 +168,7 @@ const setupEvents = () => {
   });
 
   changeLevelBtn.addEventListener('click', () => {
-    if (pendingAdvanceTimer !== null) {
-      window.clearTimeout(pendingAdvanceTimer);
-      pendingAdvanceTimer = null;
-    }
+    cancelPendingAdvance();
     resetIndex();
     showLevelSelect();
     feedbackEl.textContent = '';
@@ -177,10 +177,7 @@ const setupEvents = () => {
   });
 
   resetScoresBtn.addEventListener('click', () => {
-    if (pendingAdvanceTimer !== null) {
-      window.clearTimeout(pendingAdvanceTimer);
-      pendingAdvanceTimer = null;
-    }
+    cancelPendingAdvance();
     resetScores();
     updateHud();
     feedbackEl.textContent = 'Scores have been reset.';
@@ -191,13 +188,8 @@ const setupEvents = () => {
 
 const init = () => {
   loadScores();
-  initCanvas(canvas);
   setupEvents();
   updateHud();
-
-  window.setTimeout(() => {
-    loadingScreen.classList.add('loading-screen--hidden');
-  }, 200);
 };
 
 document.addEventListener('DOMContentLoaded', init);
