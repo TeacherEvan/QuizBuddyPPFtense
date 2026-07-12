@@ -1,5 +1,14 @@
 import { QUESTIONS } from './data.js';
-import { addPoint, getState, incrementIndex, loadScores, resetIndex, resetScores, resetStreak, setLevel } from './state.js';
+import {
+  addPoint,
+  getState,
+  incrementIndex,
+  loadScores,
+  resetIndex,
+  resetScores,
+  resetStreak,
+  setLevel
+} from './state.js';
 import { initCanvas } from './canvas.js';
 
 const LEVEL_LABELS = {
@@ -9,6 +18,18 @@ const LEVEL_LABELS = {
 };
 
 const getQuestionsByLevel = (level) => QUESTIONS.filter((question) => question.level === level);
+
+// Memoized getter: refilters only when the level changes.
+let _cachedLevel = null;
+let _cachedQuestions = [];
+const getQuestionsForCurrentLevel = () => {
+  const { currentLevel } = getState();
+  if (currentLevel !== _cachedLevel) {
+    _cachedLevel = currentLevel;
+    _cachedQuestions = getQuestionsByLevel(currentLevel);
+  }
+  return _cachedQuestions;
+};
 
 const loadingScreen = document.getElementById('loading-screen');
 const welcomeModal = document.getElementById('welcome-modal');
@@ -32,7 +53,7 @@ const pluralize = (count, singular) => `${count} ${singular}${count === 1 ? '' :
 
 const updateHud = () => {
   const state = getState();
-  const questions = getQuestionsByLevel(state.currentLevel);
+  const questions = getQuestionsForCurrentLevel();
   const displayIndex = Math.min(state.currentIndex + 1, questions.length);
 
   levelLabelEl.textContent = `Level: ${LEVEL_LABELS[state.currentLevel]}`;
@@ -51,7 +72,7 @@ const renderQuestion = () => {
   clearFeedbackState();
 
   const state = getState();
-  const questions = getQuestionsByLevel(state.currentLevel);
+  const questions = getQuestionsForCurrentLevel();
   const question = questions[state.currentIndex];
 
   if (!question) {
@@ -61,6 +82,9 @@ const renderQuestion = () => {
       button.disabled = true;
       button.style.opacity = '0.65';
     });
+    // Move focus to the change-level control so keyboard / screen-reader
+    // users are not stranded on a now-disabled answer button.
+    changeLevelBtn?.focus();
     updateHud();
     return;
   }
@@ -82,6 +106,8 @@ const showGame = () => {
   levelSelect.classList.add('panel--hidden');
   game.classList.remove('panel--hidden');
   renderQuestion();
+  // Move focus to the first answer button for screen‑reader users
+  answerButtons[0]?.focus();
 };
 
 const showLevelSelect = () => {
@@ -90,8 +116,11 @@ const showLevelSelect = () => {
 };
 
 const handleAnswer = (selectedOption) => {
+  answerButtons.forEach((button) => {
+    button.disabled = true;
+  });
   const state = getState();
-  const questions = getQuestionsByLevel(state.currentLevel);
+  const questions = getQuestionsForCurrentLevel();
   const question = questions[state.currentIndex];
 
   if (!question) {
@@ -113,7 +142,6 @@ const handleAnswer = (selectedOption) => {
     feedbackEl.textContent = `Not quite. The correct missing word is "${question.correct}".`;
   }
 
-  updateHud();
   window.setTimeout(() => {
     incrementIndex();
     renderQuestion();
@@ -124,6 +152,7 @@ const setupEvents = () => {
   startBtn.addEventListener('click', () => {
     welcomeModal.classList.remove('modal--visible');
     levelSelect.classList.remove('panel--hidden');
+    levelButtons[0]?.focus();
   });
 
   levelButtons.forEach((button) => {
@@ -143,6 +172,8 @@ const setupEvents = () => {
     resetIndex();
     showLevelSelect();
     feedbackEl.textContent = '';
+    // Return focus to the first level button
+    levelButtons[0]?.focus();
   });
 
   resetScoresBtn.addEventListener('click', () => {

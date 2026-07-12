@@ -85,8 +85,12 @@ export const saveScores = () => {
   if (payload.length > MAX_STORAGE_BYTES) {
     return false;
   }
-  localStorage.setItem(STORAGE_KEY, payload);
-  return true;
+  try {
+    localStorage.setItem(STORAGE_KEY, payload);
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 export const getState = () => ({

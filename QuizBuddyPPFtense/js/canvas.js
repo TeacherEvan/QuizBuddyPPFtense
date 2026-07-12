@@ -19,7 +19,7 @@ const COLORS_RGB = COLORS.map((hex) => {
   return {
     r: parseInt(normalized.slice(0, 2), 16),
     g: parseInt(normalized.slice(2, 4), 16),
-    b: parseInt(normalized.slice(4, 6), 16),
+    b: parseInt(normalized.slice(4, 6), 16)
   };
 });
 
@@ -51,7 +51,6 @@ class Boid {
     let separationY = 0;
 
     let alignmentCount = 0;
-    let cohesionCount = 0;
     let separationCount = 0;
 
     for (let i = 0; i < boids.length; i += 1) {
@@ -68,7 +67,6 @@ class Boid {
         cohesionX += other.x;
         cohesionY += other.y;
         alignmentCount += 1;
-        cohesionCount += 1;
       }
 
       if (distance > 0 && distance < SEPARATION_RADIUS) {
@@ -87,9 +85,9 @@ class Boid {
       this.vy += Math.max(-MAX_FORCE, Math.min(MAX_FORCE, steerY)) * 0.9;
     }
 
-    if (cohesionCount > 0) {
-      const centerX = cohesionX / cohesionCount;
-      const centerY = cohesionY / cohesionCount;
+    if (alignmentCount > 0) {
+      const centerX = cohesionX / alignmentCount;
+      const centerY = cohesionY / alignmentCount;
       const steerX = centerX - this.x;
       const steerY = centerY - this.y;
       this.vx += Math.max(-MAX_FORCE, Math.min(MAX_FORCE, steerX * 0.01));
@@ -216,7 +214,10 @@ export const initCanvas = (canvas) => {
 
   window.addEventListener('resize', resize);
 
-  const boids = Array.from({ length: BOID_COUNT }, (_, index) => new Boid(canvas.width, canvas.height, index % COLORS.length));
+  const boids = Array.from(
+    { length: BOID_COUNT },
+    (_, index) => new Boid(canvas.width, canvas.height, index % COLORS.length)
+  );
 
   let animationId;
 

@@ -15,10 +15,19 @@
     </div>
 
     <main class="app" aria-label="QuizBuddy tense practice app">
-      <section id="welcome-modal" class="modal modal--visible" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+      <section
+        id="welcome-modal"
+        class="modal modal--visible"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="welcome-title"
+      >
         <div class="modal__panel">
           <h1 id="welcome-title" class="modal__title">Welcome to QuizBuddy</h1>
-          <p class="modal__text">Practice tense recognition across Easy, Medium, and Advanced levels. Read each sentence and select the missing word that correctly completes it.</p>
+          <p class="modal__text">
+            Practice tense recognition across Easy, Medium, and Advanced levels. Read each sentence and select the
+            missing word that correctly completes it.
+          </p>
           <button id="start-btn" class="btn btn--primary" type="button">Start Learning</button>
           <footer class="modal__footer">Credit: Teacher Evan</footer>
         </div>
@@ -34,6 +43,7 @@
       </section>
 
       <section id="game" class="game panel panel--hidden" aria-live="polite">
+        <h2 class="visually-hidden">Tense Practice Game</h2>
         <header class="game__header">
           <p class="game__meta" id="level-label">Level: -</p>
           <p class="game__meta" id="question-counter">Question: 0/0</p>
