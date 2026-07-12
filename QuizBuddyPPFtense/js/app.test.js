@@ -66,4 +66,35 @@ describe('App interactivity', () => {
 
     vi.runAllTimers();
   });
+
+  it('cancels the pending advance timer when changing level mid-feedback', async () => {
+    const { QUESTIONS } = await import('./data.js');
+    await import('./app.js');
+
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+
+    document.getElementById('start-btn').click();
+    document.querySelector('[data-level="easy"]').click();
+
+    // Answer the first easy question — this schedules an 850ms advance timer.
+    const firstAnswer = easyQuestionFor(QUESTIONS, 0);
+    clickOption(firstAnswer);
+    // Do NOT advance timers yet. Switch level before the pending timer fires.
+    document.getElementById('change-level-btn').click();
+    document.querySelector('[data-level="medium"]').click();
+
+    // Flush any timers. If the stale easy timer were still live it would
+    // incrementIndex on the medium level, skipping the first medium question.
+    vi.runAllTimers();
+
+    const firstMedium = QUESTIONS.find((q) => q.level === 'medium');
+    expect(document.getElementById('sentence').textContent).toBe(firstMedium.sentence);
+  });
 });
+
+const easyQuestionFor = (QUESTIONS, index) => QUESTIONS.filter((q) => q.level === 'easy')[index].correct;
+
+const clickOption = (text) => {
+  const answerButtons = Array.from(document.querySelectorAll('[data-option]'));
+  answerButtons.find((btn) => btn.textContent === text).click();
+};

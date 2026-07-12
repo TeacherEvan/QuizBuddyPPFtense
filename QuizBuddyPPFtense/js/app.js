@@ -51,6 +51,11 @@ const resetScoresBtn = document.getElementById('reset-scores-btn');
 const canvas = document.getElementById('boids-canvas');
 const pluralize = (count, singular) => `${count} ${singular}${count === 1 ? '' : 's'}`;
 
+// Handle for the deferred question-advance timer so it can be cancelled if the
+// user navigates away (change level / reset) before it fires. Without this, a
+// pending advance would silently skip the first question of the new level.
+let pendingAdvanceTimer = null;
+
 const updateHud = () => {
   const state = getState();
   const questions = getQuestionsForCurrentLevel();
@@ -142,7 +147,8 @@ const handleAnswer = (selectedOption) => {
     feedbackEl.textContent = `Not quite. The correct missing word is "${question.correct}".`;
   }
 
-  window.setTimeout(() => {
+  pendingAdvanceTimer = window.setTimeout(() => {
+    pendingAdvanceTimer = null;
     incrementIndex();
     renderQuestion();
   }, 850);
@@ -169,6 +175,10 @@ const setupEvents = () => {
   });
 
   changeLevelBtn.addEventListener('click', () => {
+    if (pendingAdvanceTimer !== null) {
+      window.clearTimeout(pendingAdvanceTimer);
+      pendingAdvanceTimer = null;
+    }
     resetIndex();
     showLevelSelect();
     feedbackEl.textContent = '';
@@ -177,6 +187,10 @@ const setupEvents = () => {
   });
 
   resetScoresBtn.addEventListener('click', () => {
+    if (pendingAdvanceTimer !== null) {
+      window.clearTimeout(pendingAdvanceTimer);
+      pendingAdvanceTimer = null;
+    }
     resetScores();
     updateHud();
     feedbackEl.textContent = 'Scores have been reset.';

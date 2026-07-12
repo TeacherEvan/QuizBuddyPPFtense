@@ -1,5 +1,4 @@
 const STORAGE_KEY = 'quizbuddy_scores_v1';
-const MAX_STORAGE_BYTES = 5 * 1024;
 
 const defaultScores = {
   easy: 0,
@@ -82,9 +81,6 @@ export const saveScores = () => {
     scores: state.scores,
     bestStreak: state.bestStreak
   });
-  if (payload.length > MAX_STORAGE_BYTES) {
-    return false;
-  }
   try {
     localStorage.setItem(STORAGE_KEY, payload);
     return true;
