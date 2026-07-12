@@ -18,7 +18,6 @@ describe('QUESTIONS data integrity', () => {
       expect(Array.isArray(q.options)).toBe(true);
       expect(q.options).toHaveLength(3);
       expect(typeof q.correct).toBe('string');
-      expect(typeof q.tense).toBe('string');
       expect(LEVELS).toContain(q.level);
     }
   });

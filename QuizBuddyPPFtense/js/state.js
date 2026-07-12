@@ -19,21 +19,6 @@ const safeParse = (rawValue) => {
     const parsed = JSON.parse(rawValue);
     if (
       parsed &&
-      typeof parsed.easy === 'number' &&
-      typeof parsed.medium === 'number' &&
-      typeof parsed.advance === 'number'
-    ) {
-      return {
-        scores: {
-          easy: parsed.easy,
-          medium: parsed.medium,
-          advance: parsed.advance
-        },
-        bestStreak: 0
-      };
-    }
-    if (
-      parsed &&
       parsed.scores &&
       typeof parsed.scores.easy === 'number' &&
       typeof parsed.scores.medium === 'number' &&
@@ -83,9 +68,8 @@ export const saveScores = () => {
   });
   try {
     localStorage.setItem(STORAGE_KEY, payload);
-    return true;
   } catch {
-    return false;
+    // storage full / disabled (private mode) — scores stay in memory
   }
 };
 

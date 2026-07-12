@@ -17,18 +17,9 @@ const LEVEL_LABELS = {
   advance: 'Advance'
 };
 
-const getQuestionsByLevel = (level) => QUESTIONS.filter((question) => question.level === level);
-
-// Memoized getter: refilters only when the level changes.
-let _cachedLevel = null;
-let _cachedQuestions = [];
 const getQuestionsForCurrentLevel = () => {
   const { currentLevel } = getState();
-  if (currentLevel !== _cachedLevel) {
-    _cachedLevel = currentLevel;
-    _cachedQuestions = getQuestionsByLevel(currentLevel);
-  }
-  return _cachedQuestions;
+  return QUESTIONS.filter((question) => question.level === currentLevel);
 };
 
 const loadingScreen = document.getElementById('loading-screen');
@@ -165,7 +156,6 @@ const setupEvents = () => {
     button.addEventListener('click', () => {
       const level = button.dataset.level;
       setLevel(level);
-      resetIndex();
       showGame();
     });
   });
