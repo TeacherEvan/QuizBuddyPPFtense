@@ -7,7 +7,8 @@ import {
   resetIndex,
   resetScores,
   resetStreak,
-  setLevel
+  setLevel,
+  setProgress
 } from './state.js';
 const LEVEL_LABELS = {
   easy: 'Easy',
@@ -15,10 +16,38 @@ const LEVEL_LABELS = {
   advance: 'Advance'
 };
 
-const getQuestionsForCurrentLevel = () => {
-  const { currentLevel } = getState();
-  return QUESTIONS.filter((question) => question.level === currentLevel);
+// Fisher–Yates shuffle. rng is injectable (defaults to Math.random) so tests
+// can drive deterministic orders. Returns a new array; input is untouched.
+let rng = Math.random;
+
+// Test-only hook to make shuffle deterministic. Not used in production.
+export const __setRng = (fn) => {
+  rng = fn;
 };
+
+const shuffle = (arr) => {
+  const out = arr.slice();
+  for (let i = out.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+};
+
+// Per-level shuffled question list and per-question option permutation.
+// activeOptionOrder maps a question index → [0,1,2] permutation so the 3 fixed
+// answer buttons show the options in randomized positions while `correct`
+// stays discoverable by index.
+let activeQuestions = [];
+let activeOptionOrder = [];
+
+const buildActiveQuestions = (level) => {
+  const base = QUESTIONS.filter((question) => question.level === level);
+  activeQuestions = shuffle(base);
+  activeOptionOrder = activeQuestions.map(() => shuffle([0, 1, 2]));
+};
+
+const getQuestionsForCurrentLevel = () => activeQuestions;
 
 const welcomeModal = document.getElementById('welcome-modal');
 const startBtn = document.getElementById('start-btn');
@@ -36,6 +65,7 @@ const bestStreakCounterEl = document.getElementById('best-streak-counter');
 const answerButtons = Array.from(document.querySelectorAll('[data-option]'));
 const changeLevelBtn = document.getElementById('change-level-btn');
 const resetScoresBtn = document.getElementById('reset-scores-btn');
+const replayBtn = document.getElementById('replay-btn');
 const pluralize = (count, singular) => `${count} ${singular}${count === 1 ? '' : 's'}`;
 
 // Handle for the deferred question-advance timer so it can be cancelled if the
@@ -65,6 +95,7 @@ const updateHud = () => {
 const clearFeedbackState = () => {
   gameCard.classList.remove('game--correct', 'game--incorrect');
   feedbackEl.classList.remove('feedback--success', 'feedback--error');
+  replayBtn.classList.add('panel--hidden');
 };
 
 const renderQuestion = () => {
@@ -76,11 +107,13 @@ const renderQuestion = () => {
 
   if (!question) {
     sentenceEl.textContent = `Great work! You completed the ${LEVEL_LABELS[state.currentLevel]} level.`;
-    feedbackEl.textContent = 'Pick another level or reset your scores to continue practicing.';
+    feedbackEl.textContent = 'Practice again or pick another level to keep going.';
     answerButtons.forEach((button) => {
       button.disabled = true;
       button.style.opacity = '0.65';
     });
+    // Reveal replay so the learner can loop the same level immediately.
+    replayBtn.classList.remove('panel--hidden');
     // Move focus to the change-level control so keyboard / screen-reader
     // users are not stranded on a now-disabled answer button.
     changeLevelBtn?.focus();
@@ -90,8 +123,9 @@ const renderQuestion = () => {
 
   sentenceEl.textContent = question.sentence;
   feedbackEl.textContent = '';
+  const order = activeOptionOrder[state.currentIndex];
   answerButtons.forEach((button, index) => {
-    const option = question.options[index];
+    const option = question.options[order[index]];
     button.textContent = option || '';
     button.dataset.option = option || '';
     button.disabled = false;
@@ -141,6 +175,10 @@ const handleAnswer = (selectedOption) => {
     feedbackEl.textContent = `Not quite. The correct missing word is "${question.correct}".`;
   }
 
+  // Persist progress for this level so a reload resumes at the next question.
+  const nextIndex = state.currentIndex + 1;
+  setProgress(state.currentLevel, nextIndex);
+
   pendingAdvanceTimer = window.setTimeout(() => {
     pendingAdvanceTimer = null;
     incrementIndex();
@@ -158,6 +196,7 @@ const setupEvents = () => {
   levelButtons.forEach((button) => {
     button.addEventListener('click', () => {
       const level = button.dataset.level;
+      buildActiveQuestions(level);
       setLevel(level);
       showGame();
     });
@@ -183,6 +222,15 @@ const setupEvents = () => {
     feedbackEl.textContent = 'Scores have been reset.';
     feedbackEl.classList.remove('feedback--error');
     feedbackEl.classList.add('feedback--success');
+  });
+
+  replayBtn.addEventListener('click', () => {
+    cancelPendingAdvance();
+    const level = getState().currentLevel;
+    // Re-shuffle the same level and restart from the beginning.
+    buildActiveQuestions(level);
+    setLevel(level);
+    showGame();
   });
 };
 
