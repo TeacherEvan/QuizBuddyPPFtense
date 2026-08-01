@@ -6,12 +6,21 @@ const defaultScores = {
   advance: 0
 };
 
+const defaultProgress = {
+  easy: 0,
+  medium: 0,
+  advance: 0
+};
+
+const LEVELS = ['easy', 'medium', 'advance'];
+
 const state = {
   currentLevel: 'easy',
   currentIndex: 0,
   currentStreak: 0,
   bestStreak: 0,
-  scores: { ...defaultScores }
+  scores: { ...defaultScores },
+  progress: { ...defaultProgress }
 };
 
 const safeParse = (rawValue) => {
@@ -24,13 +33,24 @@ const safeParse = (rawValue) => {
       typeof parsed.scores.medium === 'number' &&
       typeof parsed.scores.advance === 'number'
     ) {
+      const progress =
+        parsed.progress && LEVELS.every((lvl) => typeof parsed.progress[lvl] === 'number')
+          ? {
+              easy: Math.max(0, parsed.progress.easy),
+              medium: Math.max(0, parsed.progress.medium),
+              advance: Math.max(0, parsed.progress.advance)
+            }
+          : { ...defaultProgress };
+      const currentLevel = LEVELS.includes(parsed.currentLevel) ? parsed.currentLevel : 'easy';
       return {
         scores: {
           easy: parsed.scores.easy,
           medium: parsed.scores.medium,
           advance: parsed.scores.advance
         },
-        bestStreak: typeof parsed.bestStreak === 'number' ? parsed.bestStreak : 0
+        bestStreak: typeof parsed.bestStreak === 'number' ? parsed.bestStreak : 0,
+        progress,
+        currentLevel
       };
     }
   } catch {
@@ -38,7 +58,9 @@ const safeParse = (rawValue) => {
   }
   return {
     scores: { ...defaultScores },
-    bestStreak: 0
+    bestStreak: 0,
+    progress: { ...defaultProgress },
+    currentLevel: 'easy'
   };
 };
 
@@ -46,6 +68,9 @@ export const loadScores = () => {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (!stored) {
     state.scores = { ...defaultScores };
+    state.progress = { ...defaultProgress };
+    state.currentLevel = 'easy';
+    state.currentIndex = 0;
     state.currentStreak = 0;
     state.bestStreak = 0;
     return state.scores;
@@ -53,6 +78,10 @@ export const loadScores = () => {
 
   const parsed = safeParse(stored);
   state.scores = parsed.scores;
+  state.progress = parsed.progress;
+  state.currentLevel = parsed.currentLevel;
+  // Resume at the saved question for the saved level (page reload behaviour).
+  state.currentIndex = Math.max(0, state.progress[state.currentLevel] ?? 0);
   state.currentStreak = 0;
   state.bestStreak = parsed.bestStreak;
   return state.scores;
@@ -61,7 +90,9 @@ export const loadScores = () => {
 export const saveScores = () => {
   const payload = JSON.stringify({
     scores: state.scores,
-    bestStreak: state.bestStreak
+    bestStreak: state.bestStreak,
+    progress: state.progress,
+    currentLevel: state.currentLevel
   });
   try {
     localStorage.setItem(STORAGE_KEY, payload);
@@ -75,12 +106,17 @@ export const getState = () => ({
   currentIndex: state.currentIndex,
   currentStreak: state.currentStreak,
   bestStreak: state.bestStreak,
-  scores: { ...state.scores }
+  scores: { ...state.scores },
+  progress: { ...state.progress }
 });
 
 export const setLevel = (level) => {
+  if (!LEVELS.includes(level)) return;
   state.currentLevel = level;
-  resetIndex();
+  // Explicit level selection re-practices the level from the beginning.
+  state.currentIndex = 0;
+  state.progress[level] = 0;
+  saveScores();
 };
 
 export const incrementIndex = () => {
@@ -89,6 +125,12 @@ export const incrementIndex = () => {
 
 export const resetIndex = () => {
   state.currentIndex = 0;
+};
+
+export const setProgress = (level, index) => {
+  if (!LEVELS.includes(level)) return;
+  state.progress[level] = Math.max(0, Math.floor(index));
+  saveScores();
 };
 
 export const addPoint = () => {
@@ -111,6 +153,7 @@ export const resetStreak = () => {
 
 export const resetScores = () => {
   state.scores = { ...defaultScores };
+  state.progress = { ...defaultProgress };
   state.currentStreak = 0;
   state.bestStreak = 0;
   saveScores();

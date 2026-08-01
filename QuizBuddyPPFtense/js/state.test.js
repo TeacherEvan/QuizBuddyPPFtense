@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getState, setLevel, incrementIndex, addPoint, resetScores } from './state.js';
+import { getState, setLevel, incrementIndex, addPoint, resetScores, setProgress, loadScores } from './state.js';
 
 describe('state management', () => {
   beforeEach(() => {
@@ -51,5 +51,39 @@ describe('state management', () => {
     expect(() => addPoint()).not.toThrow();
 
     spy.mockRestore();
+  });
+});
+
+describe('per-level progress persistence', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it('resumes at the persisted progress index for a level on reload', () => {
+    setProgress('easy', 5);
+    // Simulate a page reload: loadScores restores the saved level + index.
+    loadScores();
+    expect(getState().currentLevel).toBe('easy');
+    expect(getState().currentIndex).toBe(5);
+  });
+
+  it('clamps negative progress to 0', () => {
+    setProgress('medium', -3);
+    expect(getState().progress.medium).toBe(0);
+  });
+
+  it('resetScores zeroes progress for all levels', () => {
+    setProgress('easy', 4);
+    setProgress('advance', 2);
+    resetScores();
+    const { progress } = getState();
+    expect(progress).toEqual({ easy: 0, medium: 0, advance: 0 });
+  });
+
+  it('safeParse falls back to default progress on malformed storage', () => {
+    localStorage.setItem('quizbuddy_scores_v1', 'not json');
+    loadScores();
+    expect(getState().progress).toEqual({ easy: 0, medium: 0, advance: 0 });
   });
 });
