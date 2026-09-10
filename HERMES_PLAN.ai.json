@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "repo": "Quizzbudy",
+    "group": "GAMES",
+    "generated": "2026-08-15 18:55",
+    "branch": "main",
+    "commits": "24",
+    "lang": ".md,.local",
+    "status": "proposed"
+  },
+  "items": [
+    {
+      "area": "Study loop",
+      "action": "Implement QuizBuddyPPFtense/docs/plans/2026-08-01-study-loop (spaced-repetition study loop)."
+    },
+    {
+      "area": "Scaffold",
+      "action": "Repo is near-empty (24 files); establish app shell, build, tests before features."
+    }
+  ],
+  "instructions": "Quizzbudy (GAMES): proposed workstreams. Agent reads HERMES_PLAN.html ticks: approve(a)=implement, change(c)=revisit/clarify, skip=ignore. Compact form below.",
+  "compact": [
+    {
+      "a": "S",
+      "summary": "Implement QuizBuddyPPFtense/docs/plans/2026-08-01-study-loop (spaced-repetition study loop)."
+    },
+    {
+      "a": "S",
+      "summary": "Repo is near-empty (24 files); establish app shell, build, tests before features."
+    }
+  ]
+}
