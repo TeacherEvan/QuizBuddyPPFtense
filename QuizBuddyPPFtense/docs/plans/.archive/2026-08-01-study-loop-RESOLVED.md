@@ -69,12 +69,12 @@ mitigation (b): mechanical, low-risk, single-file changes. TDD still mandatory.
 
 All 4 tasks confirmed implemented against live code on `main`:
 
-| Task | Verified artifact | Status |
-|------|------------------|--------|
-| 1 — persist + resume progress | `state.js` (progress map, safeParse, setProgress, loadScores resume) | ✅ |
-| 2 — shuffle questions + options | `app.js` (Fisher–Yates, `activeQuestions`/`activeOptionOrder`, `__setRng` test hook) | ✅ |
-| 3 — replay on completion | `index.html` `#replay-btn` + `app.js` handler | ✅ |
-| 4 — green gates | 19/19 tests, lint clean, format clean | ✅ |
+| Task                            | Verified artifact                                                                    | Status |
+| ------------------------------- | ------------------------------------------------------------------------------------ | ------ |
+| 1 — persist + resume progress   | `state.js` (progress map, safeParse, setProgress, loadScores resume)                 | ✅     |
+| 2 — shuffle questions + options | `app.js` (Fisher–Yates, `activeQuestions`/`activeOptionOrder`, `__setRng` test hook) | ✅     |
+| 3 — replay on completion        | `index.html` `#replay-btn` + `app.js` handler                                        | ✅     |
+| 4 — green gates                 | 19/19 tests, lint clean, format clean                                                | ✅     |
 
 ### Code-review finding remediated
 
