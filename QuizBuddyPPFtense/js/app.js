@@ -238,6 +238,15 @@ const init = () => {
   loadScores();
   setupEvents();
   updateHud();
+  // Resume an in-progress level on reload. loadScores() restores the saved
+  // level + progress index; if the learner was mid-level, enter the game
+  // directly instead of leaving them at the welcome modal.
+  const state = getState();
+  if (state.currentIndex > 0) {
+    welcomeModal.classList.remove('modal--visible');
+    buildActiveQuestions(state.currentLevel);
+    showGame();
+  }
 };
 
 document.addEventListener('DOMContentLoaded', init);

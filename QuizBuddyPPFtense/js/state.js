@@ -156,5 +156,6 @@ export const resetScores = () => {
   state.progress = { ...defaultProgress };
   state.currentStreak = 0;
   state.bestStreak = 0;
+  state.currentIndex = 0;
   saveScores();
 };

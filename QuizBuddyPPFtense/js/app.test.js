@@ -138,6 +138,22 @@ describe('App interactivity', () => {
     const easySentences = QUESTIONS.filter((q) => q.level === 'easy').map((q) => q.sentence);
     expect(easySentences).toContain(document.getElementById('sentence').textContent);
   });
+
+  it('resumes the saved in-progress level on reload (init enters the game)', async () => {
+    const { setProgress, getState } = await import('./state.js');
+    await import('./app.js');
+
+    // Persist progress like a previous session would have left behind.
+    setProgress('easy', 3);
+
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+
+    // init() must detect saved progress and enter the game directly,
+    // instead of stopping at the welcome modal.
+    expect(document.getElementById('welcome-modal').classList.contains('modal--visible')).toBe(false);
+    expect(document.getElementById('game').classList.contains('panel--hidden')).toBe(false);
+    expect(getState().currentIndex).toBe(3);
+  });
 });
 
 // Answer the question currently on screen with its correct option.
