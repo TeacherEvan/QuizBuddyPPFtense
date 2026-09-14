@@ -6,12 +6,15 @@
     "branch": "main",
     "commits": "24",
     "lang": ".md,.local",
-    "status": "proposed"
+    "status": "complete",
+    "verified": "2026-09-14"
   },
   "items": [
     {
       "area": "Study loop",
-      "action": "Implement QuizBuddyPPFtense/docs/plans/2026-08-01-study-loop (spaced-repetition study loop)."
+      "action": "Implement QuizBuddyPPFtense/docs/plans/2026-08-01-study-loop (spaced-repetition study loop).",
+      "status": "done",
+      "note": "verified implemented on main (2026-09-14); resume HIGH finding fixed 3518241"
     },
     {
       "area": "Scaffold",

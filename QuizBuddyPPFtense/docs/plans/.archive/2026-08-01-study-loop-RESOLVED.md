@@ -62,3 +62,31 @@ Commit: `chore: green tests after study-loop features`
 Subagent-driven is overkill for 3 small, well-understood vanilla-JS modules.
 Implement directly in this session (parent), per superpowers subagent
 mitigation (b): mechanical, low-risk, single-file changes. TDD still mandatory.
+
+---
+
+## Final verification (2026-09-14, surgical-implementation run)
+
+All 4 tasks confirmed implemented against live code on `main`:
+
+| Task | Verified artifact | Status |
+|------|------------------|--------|
+| 1 — persist + resume progress | `state.js` (progress map, safeParse, setProgress, loadScores resume) | ✅ |
+| 2 — shuffle questions + options | `app.js` (Fisher–Yates, `activeQuestions`/`activeOptionOrder`, `__setRng` test hook) | ✅ |
+| 3 — replay on completion | `index.html` `#replay-btn` + `app.js` handler | ✅ |
+| 4 — green gates | 19/19 tests, lint clean, format clean | ✅ |
+
+### Code-review finding remediated
+
+**HIGH-1 — resume feature was dead on arrival.** `init()` loaded persisted
+progress into `currentIndex` but never entered the game; every `showGame()`
+call site runs through `setLevel()`, which zeroes progress for that level.
+Fixed in `init()` (enters the game directly when `currentIndex > 0`) and
+`resetScores()` (now also clears `currentIndex`). New TDD test
+`app.test.js` → "resumes the saved in-progress level on reload" went red
+before the fix, green after. Commit `3518241`, pushed to `origin/main`.
+
+### Remaining known gaps
+
+- **LOW-1:** No Playwright E2E suite (static app, manual `curl -I` only).
+- Plan is archived; no further action required.
