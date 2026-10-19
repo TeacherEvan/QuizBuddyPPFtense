@@ -33,6 +33,14 @@
           <button class="btn btn--level" type="button" data-level="medium">Medium</button>
           <button class="btn btn--level" type="button" data-level="advance">Advance</button>
         </div>
+        <div class="panel__actions panel__actions--modes">
+          <button id="speedrun-btn" class="btn btn--speedrun" type="button">⚡ Speed Run (60s Attack)</button>
+        </div>
+        <div class="level-stats" id="level-stats" aria-label="Personal Best Streaks">
+          <p class="level-stats__item">Easy Best: <span id="best-easy">0</span></p>
+          <p class="level-stats__item">Medium Best: <span id="best-medium">0</span></p>
+          <p class="level-stats__item">Advance Best: <span id="best-advance">0</span></p>
+        </div>
       </section>
 
       <section id="game" class="game panel panel--hidden" aria-live="polite">
@@ -43,9 +51,12 @@
           <p class="game__meta" id="score-counter">Score: 0</p>
           <p class="game__meta" id="streak-counter">Streak: 0</p>
           <p class="game__meta" id="best-streak-counter">Best Streak: 0</p>
+          <p class="game__meta panel--hidden" id="timer-counter">Time: 60s</p>
+          <button id="sound-toggle-btn" class="btn btn--sound" type="button" aria-label="Toggle Sound">🔊 Audio</button>
         </header>
 
         <article class="game__card" id="game-card">
+          <div class="game__burst" aria-hidden="true"></div>
           <p id="sentence" class="game__sentence">Choose a level to begin.</p>
           <div class="game__actions" role="group" aria-label="Select the missing word from the options below">
             <button type="button" class="btn btn--answer" data-option=""></button>

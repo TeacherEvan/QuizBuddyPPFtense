@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getState, setLevel, incrementIndex, addPoint, resetScores, setProgress, loadScores } from './state.js';
+import { getState, setLevel, incrementIndex, addPoint, resetScores, setProgress, loadScores, resetIndex } from './state.js';
 
 describe('state management', () => {
   beforeEach(() => {
@@ -52,6 +52,19 @@ describe('state management', () => {
 
     spy.mockRestore();
   });
+
+  it('should handle localStorage.getItem throwing SecurityError gracefully', () => {
+    const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('Access denied', 'SecurityError');
+    });
+
+    expect(() => loadScores()).not.toThrow();
+    const state = getState();
+    expect(state.currentLevel).toBe('easy');
+    expect(state.scores.easy).toBe(0);
+
+    spy.mockRestore();
+  });
 });
 
 describe('per-level progress persistence', () => {
@@ -73,6 +86,25 @@ describe('per-level progress persistence', () => {
     expect(getState().progress.medium).toBe(0);
   });
 
+  it('ignores NaN or non-finite progress values', () => {
+    setProgress('advance', NaN);
+    expect(getState().progress.advance).toBe(0);
+    setProgress('advance', Infinity);
+    expect(getState().progress.advance).toBe(0);
+  });
+
+  it('resetIndex zeroes progress for current level and persists to storage', () => {
+    setLevel('medium');
+    setProgress('medium', 4);
+    expect(getState().progress.medium).toBe(4);
+    resetIndex();
+    expect(getState().currentIndex).toBe(0);
+    expect(getState().progress.medium).toBe(0);
+    // Reload to verify it persisted
+    loadScores();
+    expect(getState().progress.medium).toBe(0);
+  });
+
   it('resetScores zeroes progress for all levels', () => {
     setProgress('easy', 4);
     setProgress('advance', 2);
@@ -81,9 +113,35 @@ describe('per-level progress persistence', () => {
     expect(progress).toEqual({ easy: 0, medium: 0, advance: 0 });
   });
 
-  it('safeParse falls back to default progress on malformed storage', () => {
+  it('safeParse falls back to default progress on malformed storage or non-integer scores', () => {
     localStorage.setItem('quizbuddy_scores_v1', 'not json');
     loadScores();
     expect(getState().progress).toEqual({ easy: 0, medium: 0, advance: 0 });
+
+    localStorage.setItem(
+      'quizbuddy_scores_v1',
+      JSON.stringify({ scores: { easy: 'NaN', medium: null, advance: -1 } })
+    );
+    loadScores();
+    expect(getState().scores).toEqual({ easy: 0, medium: 0, advance: 0 });
+  });
+
+  it('tracks and persists best streaks per level and globally', () => {
+    setLevel('easy');
+    addPoint();
+    addPoint();
+    expect(getState().bestStreaks.easy).toBe(2);
+    expect(getState().bestStreak).toBe(2);
+
+    setLevel('medium');
+    addPoint();
+    expect(getState().bestStreaks.medium).toBe(1);
+    expect(getState().bestStreaks.easy).toBe(2);
+    expect(getState().bestStreak).toBe(2);
+
+    loadScores();
+    expect(getState().bestStreaks.easy).toBe(2);
+    expect(getState().bestStreaks.medium).toBe(1);
   });
 });
+

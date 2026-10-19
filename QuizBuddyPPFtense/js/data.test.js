@@ -5,18 +5,20 @@ const LEVELS = ['easy', 'medium', 'advance'];
 const byLevel = (lvl) => QUESTIONS.filter((q) => q.level === lvl);
 
 describe('QUESTIONS data integrity', () => {
-  it('has 60 questions total (30 easy / 20 medium / 10 advance)', () => {
-    expect(QUESTIONS).toHaveLength(60);
-    expect(byLevel('easy')).toHaveLength(30);
-    expect(byLevel('medium')).toHaveLength(20);
-    expect(byLevel('advance')).toHaveLength(10);
+  it('has 90 questions total (40 easy / 30 medium / 20 advance)', () => {
+    expect(QUESTIONS).toHaveLength(90);
+    expect(byLevel('easy')).toHaveLength(40);
+    expect(byLevel('medium')).toHaveLength(30);
+    expect(byLevel('advance')).toHaveLength(20);
   });
 
-  it('every question has the required shape', () => {
+  it('every question has the required shape and valid missing token', () => {
     for (const q of QUESTIONS) {
       expect(typeof q.sentence).toBe('string');
+      expect(q.sentence.includes('___')).toBe(true);
       expect(Array.isArray(q.options)).toBe(true);
       expect(q.options).toHaveLength(3);
+      expect(q.options.every((o) => typeof o === 'string' && o.trim().length > 0)).toBe(true);
       expect(typeof q.correct).toBe('string');
       expect(LEVELS).toContain(q.level);
     }

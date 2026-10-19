@@ -66,6 +66,30 @@ describe('App interactivity', () => {
     vi.runAllTimers();
   });
 
+  it('handles incorrect answers with error feedback and resets streak', async () => {
+    const { QUESTIONS } = await import('./data.js');
+    const { getState } = await import('./state.js');
+    await import('./app.js');
+
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    document.getElementById('start-btn').click();
+    document.querySelector('[data-level="easy"]').click();
+
+    // Answer first question correctly to build a streak
+    answerCorrect(QUESTIONS);
+    vi.runAllTimers();
+    expect(getState().currentStreak).toBe(1);
+
+    // Answer second question incorrectly
+    answerIncorrect(QUESTIONS);
+    expect(getState().currentStreak).toBe(0);
+    expect(document.getElementById('game-card').classList.contains('game--incorrect')).toBe(true);
+    expect(document.getElementById('feedback').classList.contains('feedback--error')).toBe(true);
+    expect(document.getElementById('feedback').textContent).toContain('Not quite');
+
+    vi.runAllTimers();
+  });
+
   it('cancels the pending advance timer when changing level mid-feedback', async () => {
     const { QUESTIONS } = await import('./data.js');
     await import('./app.js');
@@ -88,6 +112,30 @@ describe('App interactivity', () => {
 
     const mediumSentences = QUESTIONS.filter((q) => q.level === 'medium').map((q) => q.sentence);
     expect(mediumSentences).toContain(document.getElementById('sentence').textContent);
+  });
+
+  it('resetScoresBtn re-renders question and enables answer buttons without soft-lock', async () => {
+    const { QUESTIONS } = await import('./data.js');
+    const { getState } = await import('./state.js');
+    await import('./app.js');
+
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    document.getElementById('start-btn').click();
+    document.querySelector('[data-level="easy"]').click();
+
+    // Answer first question, buttons get disabled immediately
+    answerCorrect(QUESTIONS);
+    const answerButtons = Array.from(document.querySelectorAll('[data-option]'));
+    expect(answerButtons[0].disabled).toBe(true);
+
+    // Click reset scores while timer is pending
+    document.getElementById('reset-scores-btn').click();
+    expect(getState().currentIndex).toBe(0);
+    expect(getState().scores.easy).toBe(0);
+
+    // Answer buttons must now be re-enabled and feedback updated
+    expect(answerButtons[0].disabled).toBe(false);
+    expect(document.getElementById('feedback').textContent).toBe('Scores have been reset.');
   });
 
   it('shuffles question order on each level start', async () => {
@@ -154,11 +202,88 @@ describe('App interactivity', () => {
     expect(document.getElementById('game').classList.contains('panel--hidden')).toBe(false);
     expect(getState().currentIndex).toBe(3);
   });
+
+  it('triggers Easter Egg 1 on 5 clicks to modal footer', async () => {
+    await import('./app.js');
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+
+    const footer = document.querySelector('.modal__footer');
+    for (let i = 0; i < 5; i += 1) {
+      footer.click();
+    }
+    expect(footer.textContent).toContain("Teacher Evan's Honor Roll");
+    expect(document.body.classList.contains('easter--scholar')).toBe(true);
+  });
+
+  it('triggers Easter Egg 2 on keyboard sequence "tense"', async () => {
+    await import('./app.js');
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+
+    for (const char of 'tense') {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: char, bubbles: true }));
+    }
+    expect(document.body.classList.contains('easter--chrono-warp')).toBe(true);
+  });
+
+  it('toggles sound on and off via the audio HUD button', async () => {
+    await import('./app.js');
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+
+    const soundBtn = document.getElementById('sound-toggle-btn');
+    expect(soundBtn.textContent).toContain('Audio');
+
+    soundBtn.click();
+    expect(soundBtn.textContent).toContain('Muted');
+    expect(soundBtn.classList.contains('sound--muted')).toBe(true);
+
+    soundBtn.click();
+    expect(soundBtn.textContent).toContain('Audio');
+    expect(soundBtn.classList.contains('sound--muted')).toBe(false);
+  });
+
+  it('displays personal best streaks on the level select panel', async () => {
+    const { addPoint, setLevel } = await import('./state.js');
+    await import('./app.js');
+
+    setLevel('easy');
+    addPoint();
+    addPoint();
+    addPoint();
+
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    document.getElementById('start-btn').click();
+
+    expect(document.getElementById('best-easy').textContent).toBe('3');
+  });
+
+  it('launches 60s speed run attack mode with countdown and score accumulation', async () => {
+    const { QUESTIONS } = await import('./data.js');
+    const { getState } = await import('./state.js');
+    await import('./app.js');
+
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    document.getElementById('start-btn').click();
+
+    const speedrunBtn = document.getElementById('speedrun-btn');
+    speedrunBtn.click();
+
+    expect(getState().speedRunActive).toBe(true);
+    expect(document.getElementById('timer-counter').classList.contains('panel--hidden')).toBe(false);
+    expect(document.getElementById('timer-counter').textContent).toBe('Time: 60s');
+
+    // Answer a question correctly in speed run mode
+    answerCorrect(QUESTIONS);
+    expect(getState().speedRunScore).toBeGreaterThanOrEqual(1);
+
+    // Advance 60 seconds of timer ticks
+    vi.advanceTimersByTime(60000);
+
+    expect(getState().speedRunActive).toBe(false);
+    expect(document.getElementById('sentence').textContent).toContain('Speed Run Complete');
+  });
 });
 
 // Answer the question currently on screen with its correct option.
-// Looks the question up by the visible sentence so it works regardless of
-// the shuffled question/option order.
 const answerCorrect = (QUESTIONS) => {
   const sentence = document.getElementById('sentence').textContent;
   const question = QUESTIONS.find((q) => q.sentence === sentence);
@@ -166,9 +291,15 @@ const answerCorrect = (QUESTIONS) => {
   answerButtons.find((btn) => btn.textContent === question.correct).click();
 };
 
+// Answer the question currently on screen with an incorrect option.
+const answerIncorrect = (QUESTIONS) => {
+  const sentence = document.getElementById('sentence').textContent;
+  const question = QUESTIONS.find((q) => q.sentence === sentence);
+  const answerButtons = Array.from(document.querySelectorAll('[data-option]'));
+  answerButtons.find((btn) => btn.textContent !== question.correct).click();
+};
+
 const readSentenceOrder = (QUESTIONS, level) => {
-  // Restart the level and capture the question order by reading the sentence
-  // on screen, answering each correctly, flushing timers between answers.
   document.getElementById('change-level-btn').click();
   document.querySelector(`[data-level="${level}"]`).click();
   const total = QUESTIONS.filter((q) => q.level === level).length;

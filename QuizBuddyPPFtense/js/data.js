@@ -148,6 +148,56 @@ const easyQuestions = [
     sentence: 'I ___ the window before it rains.',
     options: ['close', 'closed', 'will close'],
     correct: 'will close'
+  },
+  {
+    sentence: 'The train ___ the station at 9 a.m. every day.',
+    options: ['leaves', 'left', 'will leave'],
+    correct: 'leaves'
+  },
+  {
+    sentence: 'My sister ___ a beautiful picture yesterday.',
+    options: ['paints', 'painted', 'will paint'],
+    correct: 'painted'
+  },
+  {
+    sentence: 'We ___ the museum next Tuesday.',
+    options: ['tour', 'toured', 'will tour'],
+    correct: 'will tour'
+  },
+  {
+    sentence: 'Dogs ___ when strangers knock on the door.',
+    options: ['bark', 'barked', 'will bark'],
+    correct: 'bark'
+  },
+  {
+    sentence: 'He ___ his jacket at the cinema last night.',
+    options: ['forgets', 'forgot', 'will forget'],
+    correct: 'forgot'
+  },
+  {
+    sentence: 'I ___ you carry those heavy boxes tomorrow.',
+    options: ['help', 'helped', 'will help'],
+    correct: 'will help'
+  },
+  {
+    sentence: 'Our teacher ___ clear examples in every lesson.',
+    options: ['gives', 'gave', 'will give'],
+    correct: 'gives'
+  },
+  {
+    sentence: 'The children ___ a sandcastle on the beach last Sunday.',
+    options: ['build', 'built', 'will build'],
+    correct: 'built'
+  },
+  {
+    sentence: 'She ___ the piano at the concert next week.',
+    options: ['plays', 'played', 'will play'],
+    correct: 'will play'
+  },
+  {
+    sentence: 'Water ___ at zero degrees Celsius.',
+    options: ['freezes', 'froze', 'will freeze'],
+    correct: 'freezes'
   }
 ];
 
@@ -251,6 +301,56 @@ const mediumQuestions = [
     sentence: 'Before last Friday, she ___ to that museum twice.',
     options: ['has gone', 'had gone', 'will go'],
     correct: 'had gone'
+  },
+  {
+    sentence: 'Look! The chef ___ the sauce right now.',
+    options: ['is tasting', 'was tasting', 'will taste'],
+    correct: 'is tasting'
+  },
+  {
+    sentence: 'The lights went out while we ___ dinner.',
+    options: ['are eating', 'were eating', 'will be eating'],
+    correct: 'were eating'
+  },
+  {
+    sentence: 'This time next week, I ___ on a tropical island.',
+    options: ['relax', 'relaxed', 'will be relaxing'],
+    correct: 'will be relaxing'
+  },
+  {
+    sentence: 'She ___ three marathons so far this year.',
+    options: ['has completed', 'had completed', 'will complete'],
+    correct: 'has completed'
+  },
+  {
+    sentence: 'The film ___ before we reached the theater.',
+    options: ['has started', 'had started', 'will have started'],
+    correct: 'had started'
+  },
+  {
+    sentence: 'By Friday afternoon, the crew ___ the roof.',
+    options: ['has repaired', 'had repaired', 'will have repaired'],
+    correct: 'will have repaired'
+  },
+  {
+    sentence: 'He ___ the guitar since he was ten years old.',
+    options: ['has been playing', 'had been playing', 'will play'],
+    correct: 'has been playing'
+  },
+  {
+    sentence: 'The roads were icy because it ___ all night.',
+    options: ['has been snowing', 'had been snowing', 'will be snowing'],
+    correct: 'had been snowing'
+  },
+  {
+    sentence: 'They ___ the laboratory equipment at the moment.',
+    options: ['are testing', 'were testing', 'will test'],
+    correct: 'are testing'
+  },
+  {
+    sentence: 'By midnight, the bakery ___ fresh bread for six hours.',
+    options: ['has baked', 'had baked', 'will have been baking'],
+    correct: 'will have been baking'
   }
 ];
 
@@ -304,6 +404,56 @@ const advanceQuestions = [
     sentence: 'By the deadline, the scientists ___ data continuously for months.',
     options: ['have collected', 'had collected', 'will have been collecting'],
     correct: 'will have been collecting'
+  },
+  {
+    sentence: 'If you heat ice above zero degrees, it ___ into water.',
+    options: ['melts', 'melted', 'would melt'],
+    correct: 'melts'
+  },
+  {
+    sentence: 'If I had more free time, I ___ a third language.',
+    options: ['learn', 'would learn', 'will learn'],
+    correct: 'would learn'
+  },
+  {
+    sentence: 'Had they checked the forecast, they ___ umbrellas.',
+    options: ['bring', 'brought', 'would have brought'],
+    correct: 'would have brought'
+  },
+  {
+    sentence: 'By the time the train finally arrived, we ___ on the platform for an hour.',
+    options: ['have been waiting', 'had been waiting', 'will have been waiting'],
+    correct: 'had been waiting'
+  },
+  {
+    sentence: 'By 2030, astronomers ___ that exoplanet for twenty years.',
+    options: ['have observed', 'had observed', 'will have been observing'],
+    correct: 'will have been observing'
+  },
+  {
+    sentence: 'The orchestra ___ all morning, and the hall still echoes with music.',
+    options: ['has been rehearsing', 'had been rehearsing', 'will rehearse'],
+    correct: 'has been rehearsing'
+  },
+  {
+    sentence: 'If the flight is delayed tonight, we ___ our connecting train.',
+    options: ['miss', 'missed', 'will miss'],
+    correct: 'will miss'
+  },
+  {
+    sentence: 'She looked exhausted because she ___ code since sunrise.',
+    options: ['has been debugging', 'had been debugging', 'will be debugging'],
+    correct: 'had been debugging'
+  },
+  {
+    sentence: 'If he had saved his progress earlier, he ___ his work.',
+    options: ['does not lose', 'will not lose', 'would not have lost'],
+    correct: 'would not have lost'
+  },
+  {
+    sentence: 'By the end of this shift, the nurses ___ for twelve hours straight.',
+    options: ['have worked', 'had been working', 'will have been working'],
+    correct: 'will have been working'
   }
 ];
 
