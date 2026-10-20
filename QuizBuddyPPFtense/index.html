@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>QuizBuddy | Tense Trainer</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="theme-color" content="#7fb5ff" />
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
@@ -33,13 +35,37 @@
           <button class="btn btn--level" type="button" data-level="medium">Medium</button>
           <button class="btn btn--level" type="button" data-level="advance">Advance</button>
         </div>
+
+        <div class="filter-group" aria-label="Tense Focus Filter">
+          <span class="filter-group__label">Focus:</span>
+          <div class="filter-group__chips" role="group">
+            <button class="btn btn--chip btn--chip-active" type="button" data-category="all">All Tenses</button>
+            <button class="btn btn--chip" type="button" data-category="past">Past</button>
+            <button class="btn btn--chip" type="button" data-category="present">Present</button>
+            <button class="btn btn--chip" type="button" data-category="future">Future</button>
+          </div>
+        </div>
+
         <div class="panel__actions panel__actions--modes">
           <button id="speedrun-btn" class="btn btn--speedrun" type="button">⚡ Speed Run (60s Attack)</button>
+          <button id="review-mistakes-btn" class="btn btn--mistakes panel--hidden" type="button">
+            📝 Review Mistakes <span id="mistakes-count" class="badge">0</span>
+          </button>
         </div>
+
         <div class="level-stats" id="level-stats" aria-label="Personal Best Streaks">
           <p class="level-stats__item">Easy Best: <span id="best-easy">0</span></p>
           <p class="level-stats__item">Medium Best: <span id="best-medium">0</span></p>
           <p class="level-stats__item">Advance Best: <span id="best-advance">0</span></p>
+        </div>
+
+        <div class="toolbar" aria-label="Quick Settings">
+          <button id="contrast-toggle-btn" class="btn btn--toolbar" type="button" aria-label="Toggle High Contrast">
+            👁️ High Contrast
+          </button>
+          <button id="audio-theme-btn" class="btn btn--toolbar" type="button" aria-label="Toggle Audio Theme">
+            🎵 Theme: Neo
+          </button>
         </div>
       </section>
 
@@ -57,11 +83,18 @@
 
         <article class="game__card" id="game-card">
           <div class="game__burst" aria-hidden="true"></div>
+          <div class="game__tags">
+            <span id="tense-badge" class="badge badge--tense">Tense</span>
+            <span class="game__hint" id="keyboard-hint" aria-hidden="true">Keys: 1, 2, 3 or A, B, C</span>
+          </div>
           <p id="sentence" class="game__sentence">Choose a level to begin.</p>
           <div class="game__actions" role="group" aria-label="Select the missing word from the options below">
-            <button type="button" class="btn btn--answer" data-option=""></button>
-            <button type="button" class="btn btn--answer" data-option=""></button>
-            <button type="button" class="btn btn--answer" data-option=""></button>
+            <button type="button" class="btn btn--answer" data-option=""><span class="btn__key">1</span> <span class="btn__text"></span></button>
+            <button type="button" class="btn btn--answer" data-option=""><span class="btn__key">2</span> <span class="btn__text"></span></button>
+            <button type="button" class="btn btn--answer" data-option=""><span class="btn__key">3</span> <span class="btn__text"></span></button>
+          </div>
+          <div id="explanation-container" class="game__explanation-container panel--hidden" aria-live="polite">
+            <p id="explanation-text" class="game__explanation"></p>
           </div>
           <p id="feedback" class="game__feedback"></p>
         </article>
@@ -75,5 +108,12 @@
     </main>
 
     <script type="module" src="js/app.js"></script>
+    <script>
+      if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>

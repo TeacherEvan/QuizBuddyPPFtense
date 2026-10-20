@@ -1,10 +1,30 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getState, setLevel, incrementIndex, addPoint, resetScores, setProgress, loadScores, resetIndex } from './state.js';
+import {
+  getState,
+  setLevel,
+  incrementIndex,
+  addPoint,
+  resetScores,
+  setProgress,
+  loadScores,
+  resetIndex,
+  recordMistake,
+  resolveMistake,
+  clearMistakes,
+  startReviewMode,
+  exitReviewMode,
+  setCategoryFilter,
+  setHighContrast,
+  toggleHighContrast,
+  setSoundTheme,
+  setVolume
+} from './state.js';
 
 describe('state management', () => {
   beforeEach(() => {
     resetScores();
     setLevel('easy');
+    localStorage.clear();
   });
 
   it('should get initial state', () => {
@@ -17,38 +37,29 @@ describe('state management', () => {
   });
 
   it('should change level and reset index', () => {
-    setLevel('medium');
     incrementIndex();
     expect(getState().currentIndex).toBe(1);
-
-    setLevel('advance');
-    const state = getState();
-    expect(state.currentLevel).toBe('advance');
-    expect(state.currentIndex).toBe(0);
+    setLevel('medium');
+    expect(getState().currentLevel).toBe('medium');
+    expect(getState().currentIndex).toBe(0);
   });
 
   it('should add points and handle streaks', () => {
-    const result = addPoint();
-    expect(result.earned).toBe(1);
-    expect(result.streak).toBe(1);
-    expect(result.bonus).toBe(0);
-
-    // Test streak bonus after 3 correct answers
-    addPoint();
-    const result3 = addPoint();
-    expect(result3.streak).toBe(3);
-    expect(result3.bonus).toBe(1);
-    expect(result3.earned).toBe(2);
-
-    expect(getState().scores.easy).toBe(4); // 1 + 1 + (1 + 1) = 4
+    expect(addPoint()).toEqual({ earned: 1, streak: 1, bonus: 0, multiplier: 1 });
+    expect(addPoint()).toEqual({ earned: 1, streak: 2, bonus: 0, multiplier: 1 });
+    expect(addPoint()).toEqual({ earned: 2, streak: 3, bonus: 1, multiplier: 1 });
+    expect(getState().scores.easy).toBe(4);
+    expect(getState().currentStreak).toBe(3);
+    expect(getState().bestStreak).toBe(3);
   });
 
   it('should handle localStorage quota exceeded or disabled gracefully', () => {
     const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new Error('Quota exceeded');
+      throw new DOMException('QuotaExceededError', 'QuotaExceededError');
     });
 
     expect(() => addPoint()).not.toThrow();
+    expect(getState().scores.easy).toBe(1);
 
     spy.mockRestore();
   });
@@ -70,19 +81,21 @@ describe('state management', () => {
 describe('per-level progress persistence', () => {
   beforeEach(() => {
     localStorage.clear();
-    vi.restoreAllMocks();
+    resetScores();
   });
 
   it('resumes at the persisted progress index for a level on reload', () => {
-    setProgress('easy', 5);
-    // Simulate a page reload: loadScores restores the saved level + index.
+    setLevel('easy');
+    setProgress('easy', 3);
+    expect(getState().progress.easy).toBe(3);
+
     loadScores();
+    expect(getState().currentIndex).toBe(3);
     expect(getState().currentLevel).toBe('easy');
-    expect(getState().currentIndex).toBe(5);
   });
 
   it('clamps negative progress to 0', () => {
-    setProgress('medium', -3);
+    setProgress('medium', -5);
     expect(getState().progress.medium).toBe(0);
   });
 
@@ -100,7 +113,6 @@ describe('per-level progress persistence', () => {
     resetIndex();
     expect(getState().currentIndex).toBe(0);
     expect(getState().progress.medium).toBe(0);
-    // Reload to verify it persisted
     loadScores();
     expect(getState().progress.medium).toBe(0);
   });
@@ -145,3 +157,91 @@ describe('per-level progress persistence', () => {
   });
 });
 
+describe('mistake tracking, review mode, categories and accessibility state', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    resetScores();
+  });
+
+  it('records mistakes and deduplicates by sentence', () => {
+    const q1 = {
+      id: 'q_1',
+      sentence: 'I ___ to school every day.',
+      options: ['walk', 'walked', 'will walk'],
+      correct: 'walk',
+      level: 'easy'
+    };
+    recordMistake(q1);
+    expect(getState().mistakes).toHaveLength(1);
+    expect(getState().mistakes[0].sentence).toBe(q1.sentence);
+
+    // duplicate recording ignored
+    recordMistake(q1);
+    expect(getState().mistakes).toHaveLength(1);
+
+    // persists and loads
+    loadScores();
+    expect(getState().mistakes).toHaveLength(1);
+  });
+
+  it('resolves mistake when answered correctly', () => {
+    const q1 = { sentence: 'Sentence A', options: ['a', 'b'], correct: 'a' };
+    const q2 = { sentence: 'Sentence B', options: ['c', 'd'], correct: 'c' };
+    recordMistake(q1);
+    recordMistake(q2);
+    expect(getState().mistakes).toHaveLength(2);
+
+    resolveMistake('Sentence A');
+    expect(getState().mistakes).toHaveLength(1);
+    expect(getState().mistakes[0].sentence).toBe('Sentence B');
+
+    clearMistakes();
+    expect(getState().mistakes).toHaveLength(0);
+  });
+
+  it('launches review mode only when mistakes exist', () => {
+    expect(startReviewMode()).toBe(false);
+    expect(getState().reviewMode).toBe(false);
+
+    recordMistake({ sentence: 'Err 1', options: ['1'], correct: '1' });
+    expect(startReviewMode()).toBe(true);
+    expect(getState().reviewMode).toBe(true);
+
+    exitReviewMode();
+    expect(getState().reviewMode).toBe(false);
+  });
+
+  it('handles category filtering', () => {
+    setCategoryFilter('past');
+    expect(getState().activeCategoryFilter).toBe('past');
+    setCategoryFilter('invalid');
+    expect(getState().activeCategoryFilter).toBe('past');
+    setCategoryFilter('all');
+    expect(getState().activeCategoryFilter).toBe('all');
+  });
+
+  it('toggles high contrast mode and persists', () => {
+    expect(getState().highContrast).toBe(false);
+    toggleHighContrast();
+    expect(getState().highContrast).toBe(true);
+    loadScores();
+    expect(getState().highContrast).toBe(true);
+
+    setHighContrast(false);
+    expect(getState().highContrast).toBe(false);
+  });
+
+  it('configures sound theme and volume with bounds', () => {
+    setSoundTheme('8bit');
+    expect(getState().soundTheme).toBe('8bit');
+    setSoundTheme('invalid');
+    expect(getState().soundTheme).toBe('8bit');
+
+    setVolume(0.5);
+    expect(getState().volume).toBe(0.5);
+    setVolume(1.8);
+    expect(getState().volume).toBe(1);
+    setVolume(-0.2);
+    expect(getState().volume).toBe(0);
+  });
+});

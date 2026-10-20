@@ -1,5 +1,11 @@
 import { QUESTIONS } from './data.js';
-import { playSound, toggleSound, isSoundEnabled } from './audio.js';
+import {
+  playSound,
+  toggleSound,
+  isSoundEnabled,
+  getSoundTheme,
+  setSoundTheme
+} from './audio.js';
 import {
   addPoint,
   decrementSpeedRunTimer,
@@ -12,7 +18,13 @@ import {
   setLevel,
   setProgress,
   startSpeedRun,
-  stopSpeedRun
+  stopSpeedRun,
+  recordMistake,
+  resolveMistake,
+  startReviewMode,
+  exitReviewMode,
+  setCategoryFilter,
+  toggleHighContrast
 } from './state.js';
 
 const LEVEL_LABELS = {
@@ -22,13 +34,11 @@ const LEVEL_LABELS = {
 };
 
 const SECRET_CODES = ['tense', '88mph'];
-const ADVANCE_DELAY_MS = 850;
+const ADVANCE_DELAY_MS = 1100;
 
-// Fisher–Yates shuffle. rng is injectable (defaults to Math.random) so tests
-// can drive deterministic orders. Returns a new array; input is untouched.
+// Fisher–Yates shuffle with injectable rng for deterministic test execution
 let rng = Math.random;
 
-// Test-only hook to make shuffle deterministic. Not used in production.
 export const __setRng = (fn) => {
   rng = fn;
 };
@@ -42,12 +52,25 @@ const shuffle = (arr) => {
   return out;
 };
 
-// Per-level shuffled question list and per-question option permutation.
 let activeQuestions = [];
 let activeOptionOrder = [];
 
 const buildActiveQuestions = (level) => {
-  const base = QUESTIONS.filter((question) => question.level === level);
+  const state = getState();
+  if (state.reviewMode) {
+    activeQuestions = [...state.mistakes];
+    activeOptionOrder = activeQuestions.map(() => [0, 1, 2]);
+    return;
+  }
+
+  let base = QUESTIONS.filter((question) => question.level === level);
+  if (state.activeCategoryFilter && state.activeCategoryFilter !== 'all') {
+    base = base.filter((q) => q.tenseCategory === state.activeCategoryFilter);
+    if (base.length === 0) {
+      base = QUESTIONS.filter((question) => question.level === level);
+    }
+  }
+
   activeQuestions = shuffle(base);
   activeOptionOrder = activeQuestions.map(() => shuffle([0, 1, 2]));
 };
@@ -88,10 +111,33 @@ const updateLeaderboardStats = () => {
   const bestEasy = document.getElementById('best-easy');
   const bestMed = document.getElementById('best-medium');
   const bestAdv = document.getElementById('best-advance');
+  const reviewMistakesBtn = document.getElementById('review-mistakes-btn');
+  const mistakesCount = document.getElementById('mistakes-count');
+  const contrastBtn = document.getElementById('contrast-toggle-btn');
+  const audioThemeBtn = document.getElementById('audio-theme-btn');
 
   if (bestEasy) bestEasy.textContent = String(state.bestStreaks.easy || 0);
   if (bestMed) bestMed.textContent = String(state.bestStreaks.medium || 0);
   if (bestAdv) bestAdv.textContent = String(state.bestStreaks.advance || 0);
+
+  if (reviewMistakesBtn && mistakesCount) {
+    mistakesCount.textContent = String(state.mistakes.length);
+    if (state.mistakes.length > 0) {
+      reviewMistakesBtn.classList.remove('panel--hidden');
+    } else {
+      reviewMistakesBtn.classList.add('panel--hidden');
+    }
+  }
+
+  if (contrastBtn) {
+    contrastBtn.textContent = state.highContrast ? '👁️ Contrast: High' : '👁️ Contrast: Normal';
+  }
+
+  if (audioThemeBtn) {
+    audioThemeBtn.textContent = `🎵 Theme: ${getSoundTheme() === '8bit' ? '8-Bit' : 'Neo'}`;
+  }
+
+  document.body.classList.toggle('theme-high-contrast', state.highContrast);
 };
 
 const updateHud = () => {
@@ -106,12 +152,17 @@ const updateHud = () => {
 
   const state = getState();
   const questions = getQuestionsForCurrentLevel();
-  const displayIndex = Math.min(state.currentIndex + 1, questions.length);
+  const displayIndex = Math.min(state.currentIndex + 1, Math.max(1, questions.length));
 
   if (levelLabelEl) {
-    levelLabelEl.textContent = state.speedRunActive
-      ? `Mode: Speed Run (${LEVEL_LABELS[state.currentLevel]})`
-      : `Level: ${LEVEL_LABELS[state.currentLevel]}`;
+    if (state.reviewMode) {
+      levelLabelEl.textContent = 'Mode: Reviewing Mistakes';
+    } else if (state.speedRunActive) {
+      levelLabelEl.textContent = `Mode: Speed Run (${LEVEL_LABELS[state.currentLevel]})`;
+    } else {
+      const catSuffix = state.activeCategoryFilter !== 'all' ? ` [${state.activeCategoryFilter.toUpperCase()}]` : '';
+      levelLabelEl.textContent = `Level: ${LEVEL_LABELS[state.currentLevel]}${catSuffix}`;
+    }
   }
 
   if (questionCounterEl) {
@@ -157,9 +208,11 @@ const clearFeedbackState = () => {
   const gameCard = document.getElementById('game-card');
   const feedbackEl = document.getElementById('feedback');
   const replayBtn = document.getElementById('replay-btn');
+  const explContainer = document.getElementById('explanation-container');
 
   gameCard?.classList.remove('game--correct', 'game--incorrect');
   feedbackEl?.classList.remove('feedback--success', 'feedback--error');
+  explContainer?.classList.add('panel--hidden');
   replayBtn?.classList.add('panel--hidden');
 };
 
@@ -199,6 +252,7 @@ const renderQuestion = () => {
   const answerButtons = Array.from(document.querySelectorAll('[data-option]'));
   const replayBtn = document.getElementById('replay-btn');
   const changeLevelBtn = document.getElementById('change-level-btn');
+  const tenseBadge = document.getElementById('tense-badge');
 
   const state = getState();
   const questions = getQuestionsForCurrentLevel();
@@ -206,24 +260,31 @@ const renderQuestion = () => {
 
   if (!question) {
     if (state.speedRunActive) {
-      // Loop questions during speed run
       buildActiveQuestions(state.currentLevel);
       resetIndex();
       renderQuestion();
       return;
     }
     playSound('milestone');
-    if (sentenceEl) sentenceEl.textContent = `Great work! You completed the ${LEVEL_LABELS[state.currentLevel]} level.`;
+    if (sentenceEl) {
+      sentenceEl.textContent = state.reviewMode
+        ? '🎉 Excellent work! All recorded mistakes have been reviewed!'
+        : `Great work! You completed the ${LEVEL_LABELS[state.currentLevel]} level.`;
+    }
     if (feedbackEl) feedbackEl.textContent = 'Practice again or pick another level to keep going.';
     answerButtons.forEach((button) => {
       button.disabled = true;
       button.style.opacity = '0.65';
     });
-    // Reveal replay so the learner can loop the same level immediately.
     replayBtn?.classList.remove('panel--hidden');
     changeLevelBtn?.focus();
     updateHud();
     return;
+  }
+
+  if (tenseBadge) {
+    const cat = question.tenseCategory ? question.tenseCategory.toUpperCase() : 'TENSE';
+    tenseBadge.textContent = `${cat} TENSE`;
   }
 
   renderSentenceWithBlank(question.sentence);
@@ -254,6 +315,7 @@ const showGame = () => {
 const showLevelSelect = () => {
   stopSpeedRunTimer();
   stopSpeedRun();
+  exitReviewMode();
   const levelSelect = document.getElementById('level-select');
   const game = document.getElementById('game');
 
@@ -283,6 +345,8 @@ const handleAnswer = (selectedOption) => {
   const answerButtons = Array.from(document.querySelectorAll('[data-option]'));
   const gameCard = document.getElementById('game-card');
   const feedbackEl = document.getElementById('feedback');
+  const explContainer = document.getElementById('explanation-container');
+  const explText = document.getElementById('explanation-text');
 
   answerButtons.forEach((button) => {
     button.disabled = true;
@@ -299,6 +363,11 @@ const handleAnswer = (selectedOption) => {
   clearFeedbackState();
   if (gameCard) void gameCard.offsetWidth;
 
+  if (question.explanation && explContainer && explText) {
+    explText.textContent = `💡 Grammar Insight: ${question.explanation}`;
+    explContainer.classList.remove('panel--hidden');
+  }
+
   if (selectedOption === question.correct) {
     playSound('correct');
     const reward = addPoint();
@@ -310,9 +379,13 @@ const handleAnswer = (selectedOption) => {
     if (feedbackEl) {
       feedbackEl.textContent = `Correct! "${question.correct}" fits the sentence. +${pluralize(reward.earned, 'point')}${bonusText}${multText} (streak ${reward.streak}).${milestoneEgg}`;
     }
+    if (state.reviewMode) {
+      resolveMistake(question.sentence);
+    }
   } else {
     playSound('incorrect');
     resetStreak();
+    recordMistake(question);
     gameCard?.classList.add('game--incorrect');
     feedbackEl?.classList.add('feedback--error');
     if (feedbackEl) {
@@ -320,8 +393,7 @@ const handleAnswer = (selectedOption) => {
     }
   }
 
-  if (!state.speedRunActive) {
-    // Persist progress for standard mode
+  if (!state.speedRunActive && !state.reviewMode) {
     const nextIndex = state.currentIndex + 1;
     const progressToSave = nextIndex >= questions.length ? 0 : nextIndex;
     setProgress(state.currentLevel, progressToSave);
@@ -367,7 +439,11 @@ const setupEvents = () => {
   const levelSelect = document.getElementById('level-select');
   const levelButtons = Array.from(document.querySelectorAll('[data-level]'));
   const speedrunBtn = document.getElementById('speedrun-btn');
+  const reviewMistakesBtn = document.getElementById('review-mistakes-btn');
+  const chipButtons = Array.from(document.querySelectorAll('[data-category]'));
   const soundToggleBtn = document.getElementById('sound-toggle-btn');
+  const contrastToggleBtn = document.getElementById('contrast-toggle-btn');
+  const audioThemeBtn = document.getElementById('audio-theme-btn');
   const answerButtons = Array.from(document.querySelectorAll('[data-option]'));
   const changeLevelBtn = document.getElementById('change-level-btn');
   const resetScoresBtn = document.getElementById('reset-scores-btn');
@@ -387,15 +463,47 @@ const setupEvents = () => {
     button.addEventListener('click', () => {
       playSound('click');
       const level = button.dataset.level;
-      buildActiveQuestions(level);
       setLevel(level);
+      buildActiveQuestions(level);
       showGame();
+    }, { signal });
+  });
+
+  chipButtons.forEach((chip) => {
+    chip.addEventListener('click', () => {
+      playSound('click');
+      const cat = chip.dataset.category;
+      setCategoryFilter(cat);
+      chipButtons.forEach((c) => c.classList.remove('btn--chip-active'));
+      chip.classList.add('btn--chip-active');
     }, { signal });
   });
 
   speedrunBtn?.addEventListener('click', () => {
     playSound('click');
     startSpeedRunLoop();
+  }, { signal });
+
+  reviewMistakesBtn?.addEventListener('click', () => {
+    playSound('click');
+    if (startReviewMode()) {
+      buildActiveQuestions(getState().currentLevel);
+      showGame();
+    }
+  }, { signal });
+
+  contrastToggleBtn?.addEventListener('click', () => {
+    playSound('click');
+    toggleHighContrast();
+    updateLeaderboardStats();
+  }, { signal });
+
+  audioThemeBtn?.addEventListener('click', () => {
+    playSound('click');
+    const newTheme = getSoundTheme() === 'neo' ? '8bit' : 'neo';
+    setSoundTheme(newTheme);
+    playSound('milestone');
+    updateLeaderboardStats();
   }, { signal });
 
   soundToggleBtn?.addEventListener('click', () => {
@@ -447,7 +555,6 @@ const setupEvents = () => {
     }
   }, { signal });
 
-  // Easter Egg 1: 5x click on footer credit
   footer?.addEventListener('click', () => {
     footerClicks += 1;
     playSound('click');
@@ -458,10 +565,33 @@ const setupEvents = () => {
     }
   }, { signal });
 
-  // Easter Egg 2: Secret keyboard sequence ("tense" or "88mph")
   window.addEventListener('keydown', (event) => {
-    if (typeof event.key !== 'string' || event.key.length !== 1) return;
-    keyBuffer = (keyBuffer + event.key.toLowerCase()).slice(-8);
+    const key = event.key;
+    const game = document.getElementById('game');
+    const isGameActive = game && !game.classList.contains('panel--hidden');
+
+    if (isGameActive) {
+      const buttons = Array.from(document.querySelectorAll('[data-option]'));
+      if (['1', '2', '3'].includes(key)) {
+        const idx = parseInt(key, 10) - 1;
+        if (buttons[idx] && !buttons[idx].disabled) {
+          event.preventDefault();
+          handleAnswer(buttons[idx].dataset.option);
+          return;
+        }
+      } else if (['a', 'b', 'c', 'A', 'B', 'C'].includes(key)) {
+        const map = { a: 0, b: 1, c: 2 };
+        const idx = map[key.toLowerCase()];
+        if (buttons[idx] && !buttons[idx].disabled) {
+          event.preventDefault();
+          handleAnswer(buttons[idx].dataset.option);
+          return;
+        }
+      }
+    }
+
+    if (typeof key !== 'string' || key.length !== 1) return;
+    keyBuffer = (keyBuffer + key.toLowerCase()).slice(-8);
     if (SECRET_CODES.some((code) => keyBuffer.endsWith(code))) {
       keyBuffer = '';
       playSound('warp');
@@ -492,4 +622,3 @@ const init = () => {
 };
 
 document.addEventListener('DOMContentLoaded', init);
-

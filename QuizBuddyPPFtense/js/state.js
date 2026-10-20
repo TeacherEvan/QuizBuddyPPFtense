@@ -19,6 +19,8 @@ const defaultBestStreaks = {
 };
 
 const LEVELS = ['easy', 'medium', 'advance'];
+const VALID_CATEGORIES = ['all', 'past', 'present', 'future'];
+const VALID_THEMES = ['neo', '8bit'];
 
 const state = {
   currentLevel: 'easy',
@@ -30,7 +32,13 @@ const state = {
   speedRunTimeLeft: 60,
   speedRunScore: 0,
   scores: { ...defaultScores },
-  progress: { ...defaultProgress }
+  progress: { ...defaultProgress },
+  mistakes: [],
+  reviewMode: false,
+  activeCategoryFilter: 'all',
+  highContrast: false,
+  soundTheme: 'neo',
+  volume: 0.8
 };
 
 const isNonNegInt = (n) => typeof n === 'number' && Number.isInteger(n) && n >= 0;
@@ -70,6 +78,23 @@ const safeParse = (rawValue) => {
         ? parsed.bestStreak
         : Math.max(bestStreaks.easy, bestStreaks.medium, bestStreaks.advance);
 
+      const mistakes = Array.isArray(parsed.mistakes)
+        ? parsed.mistakes.filter(
+            (m) => m && typeof m.id === 'string' && typeof m.sentence === 'string'
+          )
+        : [];
+
+      const activeCategoryFilter = VALID_CATEGORIES.includes(parsed.activeCategoryFilter)
+        ? parsed.activeCategoryFilter
+        : 'all';
+
+      const highContrast = Boolean(parsed.highContrast);
+      const soundTheme = VALID_THEMES.includes(parsed.soundTheme) ? parsed.soundTheme : 'neo';
+      const volume =
+        typeof parsed.volume === 'number' && parsed.volume >= 0 && parsed.volume <= 1
+          ? parsed.volume
+          : 0.8;
+
       return {
         scores: {
           easy: parsed.scores.easy,
@@ -79,7 +104,12 @@ const safeParse = (rawValue) => {
         bestStreak: globalBest,
         bestStreaks,
         progress,
-        currentLevel
+        currentLevel,
+        mistakes,
+        activeCategoryFilter,
+        highContrast,
+        soundTheme,
+        volume
       };
     }
   } catch {
@@ -90,7 +120,12 @@ const safeParse = (rawValue) => {
     bestStreak: 0,
     bestStreaks: { ...defaultBestStreaks },
     progress: { ...defaultProgress },
-    currentLevel: 'easy'
+    currentLevel: 'easy',
+    mistakes: [],
+    activeCategoryFilter: 'all',
+    highContrast: false,
+    soundTheme: 'neo',
+    volume: 0.8
   };
 };
 
@@ -108,6 +143,12 @@ export const loadScores = () => {
     state.currentIndex = 0;
     state.currentStreak = 0;
     state.bestStreak = 0;
+    state.mistakes = [];
+    state.reviewMode = false;
+    state.activeCategoryFilter = 'all';
+    state.highContrast = false;
+    state.soundTheme = 'neo';
+    state.volume = 0.8;
     return state.scores;
   }
 
@@ -120,6 +161,12 @@ export const loadScores = () => {
   state.currentIndex = Math.max(0, state.progress[state.currentLevel] ?? 0);
   state.currentStreak = 0;
   state.bestStreak = parsed.bestStreak;
+  state.mistakes = parsed.mistakes;
+  state.reviewMode = false;
+  state.activeCategoryFilter = parsed.activeCategoryFilter;
+  state.highContrast = parsed.highContrast;
+  state.soundTheme = parsed.soundTheme;
+  state.volume = parsed.volume;
   return state.scores;
 };
 
@@ -129,7 +176,12 @@ export const saveScores = () => {
     bestStreak: state.bestStreak,
     bestStreaks: state.bestStreaks,
     progress: state.progress,
-    currentLevel: state.currentLevel
+    currentLevel: state.currentLevel,
+    mistakes: state.mistakes,
+    activeCategoryFilter: state.activeCategoryFilter,
+    highContrast: state.highContrast,
+    soundTheme: state.soundTheme,
+    volume: state.volume
   });
   try {
     localStorage.setItem(STORAGE_KEY, payload);
@@ -148,12 +200,19 @@ export const getState = () => ({
   speedRunTimeLeft: state.speedRunTimeLeft,
   speedRunScore: state.speedRunScore,
   scores: { ...state.scores },
-  progress: { ...state.progress }
+  progress: { ...state.progress },
+  mistakes: [...state.mistakes],
+  reviewMode: state.reviewMode,
+  activeCategoryFilter: state.activeCategoryFilter,
+  highContrast: state.highContrast,
+  soundTheme: state.soundTheme,
+  volume: state.volume
 });
 
 export const setLevel = (level) => {
   if (!LEVELS.includes(level)) return;
   state.currentLevel = level;
+  state.reviewMode = false;
   // Explicit level selection re-practices the level from the beginning.
   state.currentIndex = 0;
   state.currentStreak = 0;
@@ -213,6 +272,7 @@ export const startSpeedRun = () => {
   state.speedRunScore = 0;
   state.currentStreak = 0;
   state.currentIndex = 0;
+  state.reviewMode = false;
 };
 
 export const decrementSpeedRunTimer = () => {
@@ -229,6 +289,80 @@ export const stopSpeedRun = () => {
   return state.speedRunScore;
 };
 
+export const recordMistake = (question) => {
+  if (!question || !question.sentence) return;
+  const exists = state.mistakes.some((m) => m.sentence === question.sentence);
+  if (!exists) {
+    state.mistakes.push({
+      id: question.id || `q_${Date.now()}`,
+      sentence: question.sentence,
+      options: [...question.options],
+      correct: question.correct,
+      level: question.level || state.currentLevel,
+      tenseCategory: question.tenseCategory || 'present',
+      explanation: question.explanation || ''
+    });
+    saveScores();
+  }
+};
+
+export const resolveMistake = (sentence) => {
+  const initialLen = state.mistakes.length;
+  state.mistakes = state.mistakes.filter((m) => m.sentence !== sentence);
+  if (state.mistakes.length !== initialLen) {
+    saveScores();
+  }
+};
+
+export const clearMistakes = () => {
+  state.mistakes = [];
+  saveScores();
+};
+
+export const startReviewMode = () => {
+  if (state.mistakes.length === 0) return false;
+  state.reviewMode = true;
+  state.speedRunActive = false;
+  state.currentIndex = 0;
+  state.currentStreak = 0;
+  return true;
+};
+
+export const exitReviewMode = () => {
+  state.reviewMode = false;
+  state.currentIndex = 0;
+};
+
+export const setCategoryFilter = (category) => {
+  if (!VALID_CATEGORIES.includes(category)) return;
+  state.activeCategoryFilter = category;
+  state.currentIndex = 0;
+  saveScores();
+};
+
+export const setHighContrast = (enabled) => {
+  state.highContrast = Boolean(enabled);
+  saveScores();
+};
+
+export const toggleHighContrast = () => {
+  state.highContrast = !state.highContrast;
+  saveScores();
+  return state.highContrast;
+};
+
+export const setSoundTheme = (theme) => {
+  if (!VALID_THEMES.includes(theme)) return;
+  state.soundTheme = theme;
+  saveScores();
+};
+
+export const setVolume = (val) => {
+  if (typeof val !== 'number' || Number.isNaN(val)) return;
+  state.volume = Math.max(0, Math.min(1, val));
+  saveScores();
+};
+
 export const resetScores = () => {
   state.scores = { ...defaultScores };
   state.progress = { ...defaultProgress };
@@ -239,5 +373,8 @@ export const resetScores = () => {
   state.speedRunActive = false;
   state.speedRunTimeLeft = 60;
   state.speedRunScore = 0;
+  state.mistakes = [];
+  state.reviewMode = false;
+  state.activeCategoryFilter = 'all';
   saveScores();
 };

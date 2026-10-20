@@ -1,25 +1,34 @@
-# Requirements: QuizBuddyPPFtense Feature Expansion & Architectural Hardening
+# Requirements: QuizBuddyPPFtense Next-Gen Pedagogical & Experience Overhaul
 
 ## Overview
-Implement the planned feature additions and architectural hardening identified in the surgical audit:
-1. +10 Extra sentences per difficulty level (Easy: 30->40, Medium: 20->30, Advance: 10->20, Total: 60->90 questions).
-2. Appealing visual revamp following artistic frontend-engineering practices ("Chrono-Atelier Neo-Glass" design system with tactile keycaps, glowing sentence blank pill, aurora mesh backdrop, and dynamic streak aura).
-3. Interactive Easter Eggs for users to discover (5x click on footer credit, secret keyboard code "tense"/"88mph", streak milestone ranks).
-4. Core architectural fixes:
-   - State hardening: `loadScores` graceful fallback on blocked storage / `SecurityError`, `safeParse` integer validation (`isNonNegInt`) preventing `NaN`/`Infinity` poisoning, clamped progress.
-   - App orchestration: Reset scores re-renders question and prevents button soft-lock, level completion progress wrap, and `setupEvents` idempotency via `AbortController`.
-   - Mount missing `.game__burst` DOM element in `index.html`.
+Implement the comprehensive user-approved feature expansions across 5 pillars:
+1. **Pedagogical Explanations & Review System:**
+   - Add educational tense explanations to questions so every sentence teaches *why* the answer is correct (identifying signal words, grammatical aspect: Simple vs Continuous vs Perfect vs Perfect Continuous).
+   - Display tense badges and rich explanations on answer feedback.
+   - Record incorrect answers into an "Error Log" and provide a "Review Mistakes" mode that allows users to review and retake only the questions they missed.
+2. **Specialized Tense Focus Mode:**
+   - Allow filtering/practicing by specific grammatical category: Past, Present, Future, or Perfect/Continuous focus, alongside existing difficulty levels.
+3. **Accessibility (a11y) & Tactile Polish:**
+   - Keyboard navigation shortcuts: numbers `1`, `2`, `3` (and `A`, `B`, `C`) for choosing answer options; `Space` / `Enter` for next/replay actions.
+   - High contrast mode toggle for accessibility.
+   - Mobile haptic vibration feedback via `navigator.vibrate` (with fallback).
+4. **Offline PWA & Audio Evolution:**
+   - Progressive Web App support: `manifest.webmanifest`, service worker (`sw.js`) enabling offline tense practice anywhere.
+   - Sound system upgrade in `audio.js`: volume control, sound theme presets (Neo-Acoustic vs 8-Bit Chiptune).
+5. **Architectural Hardening & Test Verification:**
+   - 100% test coverage over new state routines, data schema backward compatibility, audio theme synth, and app interactivity.
+   - Zero lint errors, fully responsive design.
 
 ## Acceptance Criteria Table
 | AC ID | Requirement | Validation Method |
 | :--- | :--- | :--- |
-| **AC-001** | `js/data.js` contains 40 Easy, 30 Medium, 20 Advance questions (90 total) | `js/data.test.js` passes asserting exact lengths |
-| **AC-002** | All 90 questions contain unique options, valid `correct` answer within options, non-empty sentence with `___` | `js/data.test.js` integrity assertions |
-| **AC-003** | `js/state.js` handles `localStorage.getItem` throwing `SecurityError` or blocked storage gracefully | `js/state.test.js` mock throw test |
-| **AC-004** | `js/state.js` `safeParse` & `setProgress` reject `NaN` and `Infinity` | `js/state.test.js` boundary tests |
-| **AC-005** | `js/app.js` `#reset-scores-btn` re-renders active level cleanly without button soft-lock | `js/app.test.js` interactive test |
-| **AC-006** | `js/app.js` wraps completed level progress so reloads do not get stuck on completion card | `js/app.test.js` reload test |
-| **AC-007** | `index.html` has `.game__burst` mounted inside `#game-card` | DOM query test / inspection |
-| **AC-008** | `css/style.css` provides modern artistic aesthetic: aurora backdrop, 3D tactile buttons, dynamic streak aura | Visual inspection and syntax validity |
-| **AC-009** | 3 Easter eggs implemented (Teacher Evan credit 5x click, keyboard sequence, streak/score milestone) | Unit/integration tests & code inspection |
-| **AC-010** | All existing and new tests pass (100% green) and ESLint passes with 0 errors | `npm test` & `npm run lint` exit code 0 |
+| **AC-001** | `js/data.js` questions support `explanation` and `tenseCategory` (past/present/future/etc.) with full fallback for legacy questions | `js/data.test.js` schema validation |
+| **AC-002** | Wrong answers are tracked in state (`mistakes: []`) with persistence in `localStorage` | `js/state.test.js` mistake tracking tests |
+| **AC-003** | User can enter "Review Mistakes" mode to practice only missed questions; cleared upon correct answer | `js/app.test.js` interactive test |
+| **AC-004** | Tense explanations and badges render during answer feedback | `js/app.test.js` DOM check |
+| **AC-005** | Category/Tense focus filtering allows practicing questions matching chosen tense category | `js/app.test.js` & `js/state.test.js` |
+| **AC-006** | Keyboard shortcuts (`1`, `2`, `3`, `a`, `b`, `c`, `Enter`) select options and advance | `js/app.test.js` keydown simulation |
+| **AC-007** | High contrast mode toggle persists in state and applies `.theme-high-contrast` | `js/app.test.js` theme test |
+| **AC-008** | Audio engine in `js/audio.js` supports volume adjustment and theme switching ('neo' / '8bit') | `js/audio.test.js` |
+| **AC-009** | PWA manifest (`manifest.webmanifest`) and Service Worker (`sw.js`) present with offline caching | File presence & syntax check |
+| **AC-010** | All existing and new tests pass (100% green) and ESLint passes with 0 errors | `npm test` & `npm run lint` |

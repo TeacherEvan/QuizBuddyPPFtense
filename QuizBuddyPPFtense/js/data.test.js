@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { QUESTIONS } from './data.js';
+import { QUESTIONS, getQuestionsByLevel, getQuestionsByCategory, getCategories } from './data.js';
 
 const LEVELS = ['easy', 'medium', 'advance'];
 const byLevel = (lvl) => QUESTIONS.filter((q) => q.level === lvl);
@@ -14,6 +14,7 @@ describe('QUESTIONS data integrity', () => {
 
   it('every question has the required shape and valid missing token', () => {
     for (const q of QUESTIONS) {
+      expect(typeof q.id).toBe('string');
       expect(typeof q.sentence).toBe('string');
       expect(q.sentence.includes('___')).toBe(true);
       expect(Array.isArray(q.options)).toBe(true);
@@ -21,6 +22,9 @@ describe('QUESTIONS data integrity', () => {
       expect(q.options.every((o) => typeof o === 'string' && o.trim().length > 0)).toBe(true);
       expect(typeof q.correct).toBe('string');
       expect(LEVELS).toContain(q.level);
+      expect(typeof q.explanation).toBe('string');
+      expect(q.explanation.length).toBeGreaterThan(10);
+      expect(['past', 'present', 'future']).toContain(q.tenseCategory);
     }
   });
 
@@ -41,5 +45,13 @@ describe('QUESTIONS data integrity', () => {
       const sentences = byLevel(lvl).map((q) => q.sentence);
       expect(new Set(sentences).size).toBe(sentences.length);
     }
+  });
+
+  it('query helpers return expected filtered results', () => {
+    expect(getQuestionsByLevel('easy')).toHaveLength(40);
+    expect(getQuestionsByCategory('past').length).toBeGreaterThan(10);
+    expect(getQuestionsByCategory('present').length).toBeGreaterThan(10);
+    expect(getQuestionsByCategory('future').length).toBeGreaterThan(10);
+    expect(getCategories()).toEqual(['all', 'past', 'present', 'future']);
   });
 });

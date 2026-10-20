@@ -281,6 +281,84 @@ describe('App interactivity', () => {
     expect(getState().speedRunActive).toBe(false);
     expect(document.getElementById('sentence').textContent).toContain('Speed Run Complete');
   });
+
+  it('handles keyboard shortcuts 1, 2, 3 to answer questions', async () => {
+    const { QUESTIONS } = await import('./data.js');
+    await import('./app.js');
+
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    document.getElementById('start-btn').click();
+    document.querySelector('[data-level="easy"]').click();
+
+    const buttons = Array.from(document.querySelectorAll('[data-option]'));
+    const targetBtn = buttons[0];
+    const sentence = document.getElementById('sentence').textContent;
+    const question = QUESTIONS.find((q) => q.sentence === sentence);
+    const isFirstCorrect = targetBtn.dataset.option === question.correct;
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '1', bubbles: true }));
+
+    const feedback = document.getElementById('feedback');
+    if (isFirstCorrect) {
+      expect(feedback.textContent).toContain('Correct!');
+    } else {
+      expect(feedback.textContent).toContain('Not quite.');
+    }
+  });
+
+  it('toggles high contrast mode via settings toolbar', async () => {
+    const { getState } = await import('./state.js');
+    await import('./app.js');
+
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    document.getElementById('start-btn').click();
+
+    const contrastBtn = document.getElementById('contrast-toggle-btn');
+    contrastBtn.click();
+
+    expect(getState().highContrast).toBe(true);
+    expect(document.body.classList.contains('theme-high-contrast')).toBe(true);
+    expect(contrastBtn.textContent).toContain('Contrast: High');
+  });
+
+  it('filters questions by tense category focus', async () => {
+    const { getState } = await import('./state.js');
+    await import('./app.js');
+
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    document.getElementById('start-btn').click();
+
+    const pastChip = document.querySelector('[data-category="past"]');
+    pastChip.click();
+
+    expect(getState().activeCategoryFilter).toBe('past');
+    expect(pastChip.classList.contains('btn--chip-active')).toBe(true);
+  });
+
+  it('allows reviewing recorded mistakes and displays pedagogical explanation', async () => {
+    const { QUESTIONS } = await import('./data.js');
+    const { getState, recordMistake } = await import('./state.js');
+    await import('./app.js');
+
+    const sampleQ = QUESTIONS[0];
+    recordMistake(sampleQ);
+
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    document.getElementById('start-btn').click();
+
+    const reviewBtn = document.getElementById('review-mistakes-btn');
+    expect(reviewBtn.classList.contains('panel--hidden')).toBe(false);
+    expect(document.getElementById('mistakes-count').textContent).toBe('1');
+
+    reviewBtn.click();
+    expect(getState().reviewMode).toBe(true);
+
+    // Answer incorrectly in review mode
+    answerIncorrect(QUESTIONS);
+    const explContainer = document.getElementById('explanation-container');
+    expect(explContainer.classList.contains('panel--hidden')).toBe(false);
+    expect(document.getElementById('explanation-text').textContent).toContain('Grammar Insight');
+  });
 });
 
 // Answer the question currently on screen with its correct option.

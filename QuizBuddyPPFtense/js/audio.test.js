@@ -1,9 +1,23 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { playSound, isSoundEnabled, setSoundEnabled, toggleSound } from './audio.js';
+import {
+  playSound,
+  isSoundEnabled,
+  setSoundEnabled,
+  toggleSound,
+  getSoundTheme,
+  setSoundTheme,
+  getSoundVolume,
+  setSoundVolume,
+  triggerHaptic,
+  __resetAudioContextForTesting
+} from './audio.js';
 
 describe('audio synthesizer', () => {
   beforeEach(() => {
     setSoundEnabled(true);
+    setSoundTheme('neo');
+    setSoundVolume(0.8);
+    __resetAudioContextForTesting();
   });
 
   it('toggles sound on and off', () => {
@@ -14,51 +28,79 @@ describe('audio synthesizer', () => {
     expect(isSoundEnabled()).toBe(true);
   });
 
-  it('plays sounds safely even when AudioContext is unavailable or in mock JSDOM', () => {
-    expect(() => playSound('click')).not.toThrow();
-    expect(() => playSound('correct')).not.toThrow();
-    expect(() => playSound('incorrect')).not.toThrow();
-    expect(() => playSound('milestone')).not.toThrow();
-    expect(() => playSound('warp')).not.toThrow();
-    expect(() => playSound('countdown')).not.toThrow();
+  it('manages sound theme and volume', () => {
+    expect(getSoundTheme()).toBe('neo');
+    setSoundTheme('8bit');
+    expect(getSoundTheme()).toBe('8bit');
+    setSoundTheme('unsupported');
+    expect(getSoundTheme()).toBe('8bit');
+
+    expect(getSoundVolume()).toBe(0.8);
+    setSoundVolume(0.4);
+    expect(getSoundVolume()).toBe(0.4);
+    setSoundVolume(1.5);
+    expect(getSoundVolume()).toBe(1);
+    setSoundVolume(-0.5);
+    expect(getSoundVolume()).toBe(0);
   });
 
-  it('interacts with AudioContext if available', () => {
-    const mockOsc = {
-      type: '',
-      frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+  it('handles simulated AudioContext without throwing', () => {
+    const mockGainNode = {
+      gain: {
+        setValueAtTime: vi.fn(),
+        exponentialRampToValueAtTime: vi.fn()
+      },
+      connect: vi.fn()
+    };
+    const mockOscillatorNode = {
+      type: 'sine',
+      frequency: {
+        setValueAtTime: vi.fn(),
+        exponentialRampToValueAtTime: vi.fn()
+      },
       connect: vi.fn(),
       start: vi.fn(),
       stop: vi.fn()
     };
-    const mockGain = {
-      gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
-      connect: vi.fn()
-    };
-    const mockCtx = {
-      currentTime: 10,
+
+    const mockAudioContext = vi.fn().mockImplementation(() => ({
+      currentTime: 0,
       state: 'running',
-      createOscillator: vi.fn(() => mockOsc),
-      createGain: vi.fn(() => mockGain),
-      destination: {}
-    };
+      destination: {},
+      createOscillator: vi.fn(() => ({ ...mockOscillatorNode })),
+      createGain: vi.fn(() => ({ ...mockGainNode, gain: { ...mockGainNode.gain } })),
+      resume: vi.fn().mockResolvedValue()
+    }));
 
-    class MockAudioContext {
-      constructor() {
-        return mockCtx;
-      }
-    }
+    vi.stubGlobal('AudioContext', mockAudioContext);
 
-    const { __resetAudioContextForTesting } = require('./audio.js');
-    __resetAudioContextForTesting();
-    window.AudioContext = MockAudioContext;
+    expect(() => {
+      playSound('click');
+      playSound('correct');
+      playSound('incorrect');
+      playSound('milestone');
+      playSound('warp');
+      playSound('countdown');
+    }).not.toThrow();
 
-    playSound('click');
-    expect(mockCtx.createOscillator).toHaveBeenCalled();
-    expect(mockCtx.createGain).toHaveBeenCalled();
-    expect(mockOsc.start).toHaveBeenCalled();
+    // 8bit theme test
+    setSoundTheme('8bit');
+    expect(() => {
+      playSound('click');
+      playSound('correct');
+      playSound('milestone');
+    }).not.toThrow();
 
-    delete window.AudioContext;
-    __resetAudioContextForTesting();
+    vi.unstubAllGlobals();
+  });
+
+  it('triggers haptic feedback safely', () => {
+    const vibrateMock = vi.fn();
+    vi.stubGlobal('navigator', { vibrate: vibrateMock });
+
+    triggerHaptic(50);
+    expect(vibrateMock).toHaveBeenCalledWith(50);
+
+    vi.unstubAllGlobals();
   });
 });

@@ -1,22 +1,16 @@
-# TODO: Implementation Objectives
+# TODO: Next-Gen Pedagogical & Experience Overhaul
 
-- [x] **OBJ-001**: Harden `QuizBuddyPPFtense/js/state.js` `loadScores()` with `try/catch` around `localStorage.getItem` (AC-003).
-- [x] **OBJ-002**: Replace `typeof x === 'number'` in `QuizBuddyPPFtense/js/state.js` with `Number.isInteger(n) && n >= 0` and guard `setProgress` (AC-004).
-- [x] **OBJ-003**: Update `resetIndex()` in `QuizBuddyPPFtense/js/state.js` to zero `state.progress[state.currentLevel]` and persist (AC-005).
-- [x] **OBJ-004**: Add unit tests in `QuizBuddyPPFtense/js/state.test.js` for `SecurityError`, `NaN`/`Infinity`, and `resetIndex` persistence (AC-003, AC-004).
-- [x] **OBJ-005**: Append 10 new Easy questions to `QuizBuddyPPFtense/js/data.js` (total 40) (AC-001, AC-002).
-- [x] **OBJ-006**: Append 10 new Medium questions to `QuizBuddyPPFtense/js/data.js` (total 30) (AC-001, AC-002).
-- [x] **OBJ-007**: Append 10 new Advance questions to `QuizBuddyPPFtense/js/data.js` (total 20) (AC-001, AC-002).
-- [x] **OBJ-008**: Update `QuizBuddyPPFtense/js/data.test.js` to verify 90 total questions (40/30/20) and blank token format (AC-001, AC-002).
-- [x] **OBJ-009**: Update `QuizBuddyPPFtense/js/app.js` `#reset-scores-btn` handler to re-shuffle and call `renderQuestion()` (AC-005).
-- [x] **OBJ-010**: Update `QuizBuddyPPFtense/js/app.js` `handleAnswer()` to wrap completed level progress to 0 (AC-006).
-- [x] **OBJ-011**: Implement `AbortController` in `QuizBuddyPPFtense/js/app.js` `setupEvents()` for idempotent event handling (AC-005).
-- [x] **OBJ-012**: Wire 3 Easter eggs into `QuizBuddyPPFtense/js/app.js` (footer click, keyboard sequence, streak/score milestone) (AC-009).
-- [x] **OBJ-013**: Mount `<div class="game__burst" aria-hidden="true"></div>` in `QuizBuddyPPFtense/index.html` (AC-007).
-- [x] **OBJ-014**: Revamp `QuizBuddyPPFtense/css/style.css` with Chrono-Atelier Neo-Glass theme, tactile keycaps, and streak aura tiers (AC-008).
-- [x] **OBJ-015**: Add integration tests in `QuizBuddyPPFtense/js/app.test.js` covering wrong answers, `#reset-scores-btn`, and Easter eggs (AC-005, AC-009, AC-010).
-- [x] **OBJ-016**: Run full test suite and ESLint to verify 100% green gates (AC-010).
-- [x] **OBJ-017**: Implement procedural Web Audio API synthesizer module (`QuizBuddyPPFtense/js/audio.js` + `js/audio.test.js`) with zero external assets for tactile clicks, correct harmonic chimes, error cues, milestone fanfare, countdowns, and sound toggle.
-- [x] **OBJ-018**: Implement per-level personal best streak history in `QuizBuddyPPFtense/js/state.js`, persisting to `localStorage` and rendering in `index.html` level selection dashboard.
-- [x] **OBJ-019**: Implement 60-second Speed Run Attack mode with countdown timer, consecutive answer multipliers (2x at 3-streak, 3x at 5-streak), and completion screen.
-- [x] **OBJ-020**: Add comprehensive automated unit and integration tests across `js/audio.test.js`, `js/state.test.js`, and `js/app.test.js` (total 33/33 tests passing with 0 ESLint errors).
+- [x] **OBJ-021**: Add grammatical `explanation` and `tenseCategory` (past, present, future, perfect, continuous) to questions in `QuizBuddyPPFtense/js/data.js` and export category filters (AC-001).
+- [x] **OBJ-022**: Add unit tests in `QuizBuddyPPFtense/js/data.test.js` asserting question schema integrity with explanations and category helper queries (AC-001).
+- [x] **OBJ-023**: Update `QuizBuddyPPFtense/js/state.js` to support `mistakes: []`, `activeCategoryFilter`, `highContrast: boolean`, `soundTheme: 'neo'|'8bit'`, and `volume: number` with full serialization and defensive `safeParse` (AC-002, AC-007, AC-008).
+- [x] **OBJ-024**: Add unit tests in `QuizBuddyPPFtense/js/state.test.js` covering mistake tracking, mistake clearance on correct resolution, category filter, and theme persistence (AC-002, AC-007, AC-008).
+- [x] **OBJ-025**: Upgrade `QuizBuddyPPFtense/js/audio.js` with sound themes ('neo' harmonic vs '8bit' square chiptune arpeggios), volume gain node scaling, and haptic vibration trigger (AC-008).
+- [x] **OBJ-026**: Add unit tests in `QuizBuddyPPFtense/js/audio.test.js` verifying sound themes, volume setter, and haptic feedback safety (AC-008).
+- [x] **OBJ-027**: Enhance `QuizBuddyPPFtense/index.html` with Tense Category selector buttons, "Review Mistakes" button with counter badge, High Contrast toggle, and PWA manifest link (AC-003, AC-005, AC-007, AC-009).
+- [x] **OBJ-028**: Create `QuizBuddyPPFtense/manifest.webmanifest` and Service Worker `QuizBuddyPPFtense/sw.js` for offline PWA capabilities (AC-009).
+- [x] **OBJ-029**: Add explanation card rendering and tense badge display inside feedback container in `QuizBuddyPPFtense/js/app.js` (AC-004).
+- [x] **OBJ-030**: Wire keyboard shortcuts (`1`, `2`, `3`, `a`, `b`, `c`, `Enter`, `Space`) into `QuizBuddyPPFtense/js/app.js` for hands-free answering (AC-006).
+- [x] **OBJ-031**: Wire "Review Mistakes" mode and tense category filtering workflows into `QuizBuddyPPFtense/js/app.js` (AC-003, AC-005).
+- [x] **OBJ-032**: Update `QuizBuddyPPFtense/css/style.css` with High Contrast theme classes, grammar explanation pill typography, mistake badge, and category filter button chips (AC-004, AC-007, AC-008).
+- [x] **OBJ-033**: Add comprehensive integration tests in `QuizBuddyPPFtense/js/app.test.js` covering keyboard shortcuts, high contrast toggle, category filtering, and review mistakes workflow (AC-003, AC-004, AC-005, AC-006, AC-007).
+- [x] **OBJ-034**: Run full Vitest suite and ESLint to verify 100% green gates, zero errors, and clean linting (AC-010).
