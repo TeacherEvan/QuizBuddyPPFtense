@@ -4,6 +4,14 @@ name: CI
 # README (format, lint, test) was advisory, and the "45/45 green" result was
 # never reproducible from the committed lockfile. This workflow makes the
 # documented gates real.
+#
+# NOTE: this account is currently locked for billing, so GitHub Actions refuses
+# to start the job ("The job was not started because your account is locked
+# due to a billing issue"). The workflow is valid and will run as soon as the
+# account is unlocked. Until then, run the identical gates locally with:
+#
+#     cd QuizBuddyPPFtense && npm ci && npm run verify
+#
 on:
   push:
     branches: [main]

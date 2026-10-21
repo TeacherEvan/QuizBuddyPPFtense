@@ -47,6 +47,9 @@ npm run lint
 # Format check
 npm run format:check
 
+# All gates at once (what CI runs)
+npm run verify
+
 # Serve locally (any static server)
 npx serve .
 # or
@@ -136,6 +139,7 @@ Validation (via `data.test.js`):
 | `npm run lint`                      | ESLint flat config                         |
 | `npm run format`                    | Prettier write                             |
 | `npm run format:check`              | Prettier check (CI gate — exits non-zero)  |
+| `npm run verify`                    | Run every gate: format → lint → test       |
 | `python3 scripts/generate_icons.py` | Regenerate the PWA icon set (needs Pillow) |
 
 ---
