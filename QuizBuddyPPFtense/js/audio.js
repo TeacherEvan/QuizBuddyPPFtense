@@ -49,7 +49,11 @@ export const setSoundVolume = (vol) => {
 };
 
 export const triggerHaptic = (pattern = 25) => {
-  if (typeof window !== 'undefined' && typeof window.navigator !== 'undefined' && typeof window.navigator.vibrate === 'function') {
+  if (
+    typeof window !== 'undefined' &&
+    typeof window.navigator !== 'undefined' &&
+    typeof window.navigator.vibrate === 'function'
+  ) {
     try {
       window.navigator.vibrate(pattern);
     } catch {

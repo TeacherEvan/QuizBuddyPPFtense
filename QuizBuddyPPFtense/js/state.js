@@ -46,11 +46,7 @@ const isNonNegInt = (n) => typeof n === 'number' && Number.isInteger(n) && n >= 
 const safeParse = (rawValue) => {
   try {
     const parsed = JSON.parse(rawValue);
-    if (
-      parsed &&
-      parsed.scores &&
-      LEVELS.every((lvl) => isNonNegInt(parsed.scores[lvl]))
-    ) {
+    if (parsed && parsed.scores && LEVELS.every((lvl) => isNonNegInt(parsed.scores[lvl]))) {
       const progress =
         parsed.progress && LEVELS.every((lvl) => isNonNegInt(parsed.progress[lvl]))
           ? {
@@ -79,9 +75,7 @@ const safeParse = (rawValue) => {
         : Math.max(bestStreaks.easy, bestStreaks.medium, bestStreaks.advance);
 
       const mistakes = Array.isArray(parsed.mistakes)
-        ? parsed.mistakes.filter(
-            (m) => m && typeof m.id === 'string' && typeof m.sentence === 'string'
-          )
+        ? parsed.mistakes.filter((m) => m && typeof m.id === 'string' && typeof m.sentence === 'string')
         : [];
 
       const activeCategoryFilter = VALID_CATEGORIES.includes(parsed.activeCategoryFilter)
@@ -91,9 +85,7 @@ const safeParse = (rawValue) => {
       const highContrast = Boolean(parsed.highContrast);
       const soundTheme = VALID_THEMES.includes(parsed.soundTheme) ? parsed.soundTheme : 'neo';
       const volume =
-        typeof parsed.volume === 'number' && parsed.volume >= 0 && parsed.volume <= 1
-          ? parsed.volume
-          : 0.8;
+        typeof parsed.volume === 'number' && parsed.volume >= 0 && parsed.volume <= 1 ? parsed.volume : 0.8;
 
       return {
         scores: {

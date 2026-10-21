@@ -130,10 +130,7 @@ describe('per-level progress persistence', () => {
     loadScores();
     expect(getState().progress).toEqual({ easy: 0, medium: 0, advance: 0 });
 
-    localStorage.setItem(
-      'quizbuddy_scores_v1',
-      JSON.stringify({ scores: { easy: 'NaN', medium: null, advance: -1 } })
-    );
+    localStorage.setItem('quizbuddy_scores_v1', JSON.stringify({ scores: { easy: 'NaN', medium: null, advance: -1 } }));
     loadScores();
     expect(getState().scores).toEqual({ easy: 0, medium: 0, advance: 0 });
   });

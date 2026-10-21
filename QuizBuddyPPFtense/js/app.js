@@ -1,11 +1,5 @@
 import { QUESTIONS } from './data.js';
-import {
-  playSound,
-  toggleSound,
-  isSoundEnabled,
-  getSoundTheme,
-  setSoundTheme
-} from './audio.js';
+import { playSound, toggleSound, isSoundEnabled, getSoundTheme, setSoundTheme } from './audio.js';
 import {
   addPoint,
   decrementSpeedRunTimer,
@@ -82,6 +76,10 @@ const pluralize = (count, singular) => `${count} ${singular}${count === 1 ? '' :
 let pendingAdvanceTimer = null;
 let speedRunInterval = null;
 let eventsController = null;
+// Every controller this module instance has ever created. Abort ALL of them on
+// teardown: a single leaked controller keeps a stale keydown listener on
+// `window`, and a stale instance answers with its own question bank.
+const eventsControllers = new Set();
 let keyBuffer = '';
 let footerClicks = 0;
 
@@ -156,7 +154,7 @@ const updateHud = () => {
 
   if (levelLabelEl) {
     if (state.reviewMode) {
-      levelLabelEl.textContent = 'Mode: Reviewing Mistakes';
+      levelLabelEl.textContent = 'Mode: Review';
     } else if (state.speedRunActive) {
       levelLabelEl.textContent = `Mode: Speed Run (${LEVEL_LABELS[state.currentLevel]})`;
     } else {
@@ -209,11 +207,17 @@ const clearFeedbackState = () => {
   const feedbackEl = document.getElementById('feedback');
   const replayBtn = document.getElementById('replay-btn');
   const explContainer = document.getElementById('explanation-container');
+  const explText = document.getElementById('explanation-text');
 
   gameCard?.classList.remove('game--correct', 'game--incorrect');
   feedbackEl?.classList.remove('feedback--success', 'feedback--error');
   explContainer?.classList.add('panel--hidden');
+  // Drop the previous insight so the reserved slot never shows stale text.
+  explText?.replaceChildren();
   replayBtn?.classList.add('panel--hidden');
+  document.querySelectorAll('[data-option]').forEach((button) => {
+    button.classList.remove('btn--is-correct', 'btn--is-wrong', 'btn--is-locked');
+  });
 };
 
 const renderSentenceWithBlank = (sentence) => {
@@ -238,7 +242,7 @@ const handleSpeedRunComplete = () => {
   }
   answerButtons.forEach((button) => {
     button.disabled = true;
-    button.style.opacity = '0.65';
+    button.classList.add('btn--is-locked');
   });
   replayBtn?.classList.remove('panel--hidden');
   updateHud();
@@ -274,7 +278,7 @@ const renderQuestion = () => {
     if (feedbackEl) feedbackEl.textContent = 'Practice again or pick another level to keep going.';
     answerButtons.forEach((button) => {
       button.disabled = true;
-      button.style.opacity = '0.65';
+      button.classList.add('btn--is-locked');
     });
     replayBtn?.classList.remove('panel--hidden');
     changeLevelBtn?.focus();
@@ -294,8 +298,15 @@ const renderQuestion = () => {
     const option = question.options[order[index]];
     button.textContent = option || '';
     button.dataset.option = option || '';
+    // The keycap pseudo-element is decorative: keep the accessible name
+    // equal to the visible option text.
+    if (option) {
+      button.setAttribute('aria-label', option);
+    } else {
+      button.removeAttribute('aria-label');
+    }
     button.disabled = false;
-    button.style.opacity = '1';
+    button.classList.remove('btn--is-correct', 'btn--is-wrong', 'btn--is-locked');
   });
 
   updateHud();
@@ -327,15 +338,15 @@ const showLevelSelect = () => {
 const checkMilestoneEasterEgg = (streak, score) => {
   if (streak === 10) {
     playSound('milestone');
-    return ' 🌌 [Chronomancer: Unstoppable 10-Streak Master!]';
+    return ' 🌌 [10-Streak Master!]';
   }
   if (streak === 7) {
     playSound('milestone');
-    return ' ⏳ [Time Lord: 7 Streak Achieved!]';
+    return ' ⏳ [7-Streak Achieved!]';
   }
   if (score === 42) {
     playSound('milestone');
-    return ' ✨ [Easter Egg: 42 is the Answer to All Tenses!]';
+    return ' ✨ [42 is the Answer!]';
   }
   return '';
 };
@@ -364,20 +375,37 @@ const handleAnswer = (selectedOption) => {
   if (gameCard) void gameCard.offsetWidth;
 
   if (question.explanation && explContainer && explText) {
-    explText.textContent = `💡 Grammar Insight: ${question.explanation}`;
+    // Reveal the slot first so the live region announces the new insight.
     explContainer.classList.remove('panel--hidden');
+    explText.textContent = `💡 Grammar Insight: ${question.explanation}`;
   }
+
+  const revealAnswer = (wrongOption = null) => {
+    answerButtons.forEach((button) => {
+      if (button.dataset.option === question.correct) {
+        button.classList.add('btn--is-correct');
+      } else if (wrongOption !== null && button.dataset.option === wrongOption) {
+        button.classList.add('btn--is-wrong');
+      }
+    });
+  };
 
   if (selectedOption === question.correct) {
     playSound('correct');
     const reward = addPoint();
     gameCard?.classList.add('game--correct');
     feedbackEl?.classList.add('feedback--success');
-    const bonusText = reward.bonus ? ` including ${reward.bonus} bonus point` : '';
-    const multText = reward.multiplier > 1 ? ` (${reward.multiplier}x Multiplier!)` : '';
+    revealAnswer();
+    // Compact detail string: every modifier still lands, but the line stays
+    // short enough to fit the reserved feedback box on narrow screens.
+    const details = [`${pluralize(reward.earned, 'point')}`];
+    if (reward.bonus) details.push('1 bonus');
+    if (reward.multiplier > 1) details.push(`${reward.multiplier}x multiplier`);
     const milestoneEgg = checkMilestoneEasterEgg(reward.streak, getState().scores[state.currentLevel]);
     if (feedbackEl) {
-      feedbackEl.textContent = `Correct! "${question.correct}" fits the sentence. +${pluralize(reward.earned, 'point')}${bonusText}${multText} (streak ${reward.streak}).${milestoneEgg}`;
+      feedbackEl.textContent = `Correct! "${question.correct}" fits the sentence. (${details.join(', ')}) Streak ${
+        reward.streak
+      }.${milestoneEgg}`;
     }
     if (state.reviewMode) {
       resolveMistake(question.sentence);
@@ -388,6 +416,7 @@ const handleAnswer = (selectedOption) => {
     recordMistake(question);
     gameCard?.classList.add('game--incorrect');
     feedbackEl?.classList.add('feedback--error');
+    revealAnswer(selectedOption);
     if (feedbackEl) {
       feedbackEl.textContent = `Not quite. The correct missing word is "${question.correct}".`;
     }
@@ -426,10 +455,12 @@ const startSpeedRunLoop = () => {
 };
 
 const setupEvents = () => {
-  eventsController?.abort();
+  eventsControllers.forEach((controller) => controller.abort());
+  eventsControllers.clear();
   stopSpeedRunTimer();
   const Controller = (typeof window !== 'undefined' && window.AbortController) || AbortController;
   eventsController = new Controller();
+  eventsControllers.add(eventsController);
   const { signal } = eventsController;
   keyBuffer = '';
   footerClicks = 0;
@@ -451,157 +482,209 @@ const setupEvents = () => {
   const feedbackEl = document.getElementById('feedback');
   const footer = document.querySelector('.modal__footer');
 
-  startBtn?.addEventListener('click', () => {
-    playSound('click');
-    welcomeModal?.classList.remove('modal--visible');
-    levelSelect?.classList.remove('panel--hidden');
-    updateLeaderboardStats();
-    levelButtons[0]?.focus();
-  }, { signal });
+  startBtn?.addEventListener(
+    'click',
+    () => {
+      playSound('click');
+      welcomeModal?.classList.remove('modal--visible');
+      levelSelect?.classList.remove('panel--hidden');
+      updateLeaderboardStats();
+      levelButtons[0]?.focus();
+    },
+    { signal }
+  );
 
   levelButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      playSound('click');
-      const level = button.dataset.level;
-      setLevel(level);
-      buildActiveQuestions(level);
-      showGame();
-    }, { signal });
+    button.addEventListener(
+      'click',
+      () => {
+        playSound('click');
+        const level = button.dataset.level;
+        setLevel(level);
+        buildActiveQuestions(level);
+        showGame();
+      },
+      { signal }
+    );
   });
 
   chipButtons.forEach((chip) => {
-    chip.addEventListener('click', () => {
-      playSound('click');
-      const cat = chip.dataset.category;
-      setCategoryFilter(cat);
-      chipButtons.forEach((c) => c.classList.remove('btn--chip-active'));
-      chip.classList.add('btn--chip-active');
-    }, { signal });
+    chip.addEventListener(
+      'click',
+      () => {
+        playSound('click');
+        const cat = chip.dataset.category;
+        setCategoryFilter(cat);
+        chipButtons.forEach((c) => c.classList.remove('btn--chip-active'));
+        chip.classList.add('btn--chip-active');
+      },
+      { signal }
+    );
   });
 
-  speedrunBtn?.addEventListener('click', () => {
-    playSound('click');
-    startSpeedRunLoop();
-  }, { signal });
+  speedrunBtn?.addEventListener(
+    'click',
+    () => {
+      playSound('click');
+      startSpeedRunLoop();
+    },
+    { signal }
+  );
 
-  reviewMistakesBtn?.addEventListener('click', () => {
-    playSound('click');
-    if (startReviewMode()) {
-      buildActiveQuestions(getState().currentLevel);
-      showGame();
-    }
-  }, { signal });
+  reviewMistakesBtn?.addEventListener(
+    'click',
+    () => {
+      playSound('click');
+      if (startReviewMode()) {
+        buildActiveQuestions(getState().currentLevel);
+        showGame();
+      }
+    },
+    { signal }
+  );
 
-  contrastToggleBtn?.addEventListener('click', () => {
-    playSound('click');
-    toggleHighContrast();
-    updateLeaderboardStats();
-  }, { signal });
+  contrastToggleBtn?.addEventListener(
+    'click',
+    () => {
+      playSound('click');
+      toggleHighContrast();
+      updateLeaderboardStats();
+    },
+    { signal }
+  );
 
-  audioThemeBtn?.addEventListener('click', () => {
-    playSound('click');
-    const newTheme = getSoundTheme() === 'neo' ? '8bit' : 'neo';
-    setSoundTheme(newTheme);
-    playSound('milestone');
-    updateLeaderboardStats();
-  }, { signal });
+  audioThemeBtn?.addEventListener(
+    'click',
+    () => {
+      playSound('click');
+      const newTheme = getSoundTheme() === 'neo' ? '8bit' : 'neo';
+      setSoundTheme(newTheme);
+      playSound('milestone');
+      updateLeaderboardStats();
+    },
+    { signal }
+  );
 
-  soundToggleBtn?.addEventListener('click', () => {
-    toggleSound();
-    playSound('click');
-    updateHud();
-  }, { signal });
+  soundToggleBtn?.addEventListener(
+    'click',
+    () => {
+      toggleSound();
+      playSound('click');
+      updateHud();
+    },
+    { signal }
+  );
 
   answerButtons.forEach((button) => {
     button.addEventListener('click', () => handleAnswer(button.dataset.option), { signal });
   });
 
-  changeLevelBtn?.addEventListener('click', () => {
-    playSound('click');
-    cancelPendingAdvance();
-    stopSpeedRunTimer();
-    stopSpeedRun();
-    resetIndex();
-    showLevelSelect();
-    if (feedbackEl) feedbackEl.textContent = '';
-    levelButtons[0]?.focus();
-  }, { signal });
+  changeLevelBtn?.addEventListener(
+    'click',
+    () => {
+      playSound('click');
+      cancelPendingAdvance();
+      stopSpeedRunTimer();
+      stopSpeedRun();
+      resetIndex();
+      showLevelSelect();
+      if (feedbackEl) feedbackEl.textContent = '';
+      levelButtons[0]?.focus();
+    },
+    { signal }
+  );
 
-  resetScoresBtn?.addEventListener('click', () => {
-    playSound('click');
-    cancelPendingAdvance();
-    stopSpeedRunTimer();
-    const level = getState().currentLevel;
-    resetScores();
-    buildActiveQuestions(level);
-    renderQuestion();
-    if (feedbackEl) {
-      feedbackEl.textContent = 'Scores have been reset.';
-      feedbackEl.classList.remove('feedback--error');
-      feedbackEl.classList.add('feedback--success');
-    }
-  }, { signal });
-
-  replayBtn?.addEventListener('click', () => {
-    playSound('click');
-    cancelPendingAdvance();
-    if (getState().speedRunActive) {
-      startSpeedRunLoop();
-    } else {
+  resetScoresBtn?.addEventListener(
+    'click',
+    () => {
+      playSound('click');
+      cancelPendingAdvance();
+      stopSpeedRunTimer();
       const level = getState().currentLevel;
+      resetScores();
       buildActiveQuestions(level);
-      setLevel(level);
-      showGame();
-    }
-  }, { signal });
+      renderQuestion();
+      if (feedbackEl) {
+        feedbackEl.textContent = 'Scores have been reset.';
+        feedbackEl.classList.remove('feedback--error');
+        feedbackEl.classList.add('feedback--success');
+      }
+    },
+    { signal }
+  );
 
-  footer?.addEventListener('click', () => {
-    footerClicks += 1;
-    playSound('click');
-    if (footerClicks >= 5) {
-      playSound('milestone');
-      footer.textContent = "🍎 Teacher Evan's Honor Roll: 'Time flies like an arrow; fruit flies like a banana!'";
-      document.body.classList.add('easter--scholar');
-    }
-  }, { signal });
+  replayBtn?.addEventListener(
+    'click',
+    () => {
+      playSound('click');
+      cancelPendingAdvance();
+      if (getState().speedRunActive) {
+        startSpeedRunLoop();
+      } else {
+        const level = getState().currentLevel;
+        buildActiveQuestions(level);
+        setLevel(level);
+        showGame();
+      }
+    },
+    { signal }
+  );
 
-  window.addEventListener('keydown', (event) => {
-    const key = event.key;
-    const game = document.getElementById('game');
-    const isGameActive = game && !game.classList.contains('panel--hidden');
+  footer?.addEventListener(
+    'click',
+    () => {
+      footerClicks += 1;
+      playSound('click');
+      if (footerClicks >= 5) {
+        playSound('milestone');
+        footer.textContent = "🍎 Teacher Evan's Honor Roll: 'Time flies like an arrow; fruit flies like a banana!'";
+        document.body.classList.add('easter--scholar');
+      }
+    },
+    { signal }
+  );
 
-    if (isGameActive) {
-      const buttons = Array.from(document.querySelectorAll('[data-option]'));
-      if (['1', '2', '3'].includes(key)) {
-        const idx = parseInt(key, 10) - 1;
-        if (buttons[idx] && !buttons[idx].disabled) {
-          event.preventDefault();
-          handleAnswer(buttons[idx].dataset.option);
-          return;
-        }
-      } else if (['a', 'b', 'c', 'A', 'B', 'C'].includes(key)) {
-        const map = { a: 0, b: 1, c: 2 };
-        const idx = map[key.toLowerCase()];
-        if (buttons[idx] && !buttons[idx].disabled) {
-          event.preventDefault();
-          handleAnswer(buttons[idx].dataset.option);
-          return;
+  window.addEventListener(
+    'keydown',
+    (event) => {
+      const key = event.key;
+      const game = document.getElementById('game');
+      const isGameActive = game && !game.classList.contains('panel--hidden');
+
+      if (isGameActive) {
+        const buttons = Array.from(document.querySelectorAll('[data-option]'));
+        if (['1', '2', '3'].includes(key)) {
+          const idx = parseInt(key, 10) - 1;
+          if (buttons[idx] && !buttons[idx].disabled) {
+            event.preventDefault();
+            handleAnswer(buttons[idx].dataset.option);
+            return;
+          }
+        } else if (['a', 'b', 'c', 'A', 'B', 'C'].includes(key)) {
+          const map = { a: 0, b: 1, c: 2 };
+          const idx = map[key.toLowerCase()];
+          if (buttons[idx] && !buttons[idx].disabled) {
+            event.preventDefault();
+            handleAnswer(buttons[idx].dataset.option);
+            return;
+          }
         }
       }
-    }
 
-    if (typeof key !== 'string' || key.length !== 1) return;
-    keyBuffer = (keyBuffer + key.toLowerCase()).slice(-8);
-    if (SECRET_CODES.some((code) => keyBuffer.endsWith(code))) {
-      keyBuffer = '';
-      playSound('warp');
-      document.body.classList.add('easter--chrono-warp');
-      const currentFeedback = document.getElementById('feedback');
-      if (currentFeedback) {
-        currentFeedback.textContent = '⚡ 1.21 GIGAWATTS! Past, Present & Future timelines synchronized!';
+      if (typeof key !== 'string' || key.length !== 1) return;
+      keyBuffer = (keyBuffer + key.toLowerCase()).slice(-8);
+      if (SECRET_CODES.some((code) => keyBuffer.endsWith(code))) {
+        keyBuffer = '';
+        playSound('warp');
+        document.body.classList.add('easter--chrono-warp');
+        const currentFeedback = document.getElementById('feedback');
+        if (currentFeedback) {
+          currentFeedback.textContent = '⚡ 1.21 GIGAWATTS! Past, Present & Future timelines synchronized!';
+        }
       }
-    }
-  }, { signal });
+    },
+    { signal }
+  );
 };
 
 const init = () => {
@@ -621,4 +704,22 @@ const init = () => {
   }
 };
 
-document.addEventListener('DOMContentLoaded', init);
+/**
+ * Test-support hook: fully detach this module instance.
+ *
+ * Every test re-imports app.js, which leaves the previous instance's
+ * window listeners (and its pending advance timer) attached to the shared
+ * document. A stale instance would then answer the current question with
+ * its own question bank, which made the keyboard-shortcut test flaky.
+ * `__teardown()` guarantees a clean slate between test cases.
+ */
+export const __teardown = () => {
+  cancelPendingAdvance();
+  stopSpeedRunTimer();
+  eventsControllers.forEach((controller) => controller.abort());
+  eventsControllers.clear();
+  eventsController = null;
+  document.removeEventListener('DOMContentLoaded', init);
+};
+
+document.addEventListener('DOMContentLoaded', init, { once: true });

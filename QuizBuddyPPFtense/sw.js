@@ -1,4 +1,4 @@
-const CACHE_NAME = 'quizbuddy-cache-v2';
+const CACHE_NAME = 'quizbuddy-cache-v3';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -7,7 +7,10 @@ const STATIC_ASSETS = [
   './js/data.js',
   './js/state.js',
   './js/audio.js',
-  './manifest.webmanifest'
+  './manifest.webmanifest',
+  './icons/icon-180.png',
+  './icons/icon-192.png',
+  './icons/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {

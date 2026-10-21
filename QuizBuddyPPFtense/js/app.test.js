@@ -2,8 +2,28 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
+// The app module keeps module-level state (listeners, timers, the active
+// question bank). Every test therefore needs its OWN module instance, and
+// the teardown must target EXACTLY the instance the test used.
+//
+// Previously `afterEach` re-imported './app.js' to reach `__teardown`. That
+// import could resolve to a different instance than the one under test, so
+// the previous instance's 'DOMContentLoaded' listener stayed registered on
+// the shared document. Each later DOMContentLoaded dispatch then fanned out
+// to every accumulated instance, and a stale instance answered the keyboard
+// shortcut with its own question bank -> the ~1-in-3 flaky keyboard test.
+let appModule = null;
+
+const loadApp = async () => {
+  appModule = await import('./app.js');
+  return appModule;
+};
+
 describe('App interactivity', () => {
   beforeEach(() => {
+    // Fresh module registry => a fresh app.js (and state.js) instance.
+    vi.resetModules();
+    appModule = null;
     localStorage.clear();
     const htmlPath = resolve(__dirname, '../index.html');
     const html = readFileSync(htmlPath, 'utf8');
@@ -13,13 +33,16 @@ describe('App interactivity', () => {
   });
 
   afterEach(() => {
+    // Detach the app instance this test imported so its window listeners and
+    // pending timers cannot leak into the next test.
+    appModule?.__teardown?.();
+    appModule = null;
     vi.useRealTimers();
-    vi.resetModules();
   });
 
   it('should move focus to change-level button when a level is completed', async () => {
     const { QUESTIONS } = await import('./data.js');
-    await import('./app.js');
+    await loadApp();
 
     document.dispatchEvent(new Event('DOMContentLoaded'));
 
@@ -43,7 +66,7 @@ describe('App interactivity', () => {
   });
 
   it('should disable answer buttons on click to prevent double submission', async () => {
-    await import('./app.js');
+    await loadApp();
 
     document.dispatchEvent(new Event('DOMContentLoaded'));
 
@@ -69,7 +92,7 @@ describe('App interactivity', () => {
   it('handles incorrect answers with error feedback and resets streak', async () => {
     const { QUESTIONS } = await import('./data.js');
     const { getState } = await import('./state.js');
-    await import('./app.js');
+    await loadApp();
 
     document.dispatchEvent(new Event('DOMContentLoaded'));
     document.getElementById('start-btn').click();
@@ -92,7 +115,7 @@ describe('App interactivity', () => {
 
   it('cancels the pending advance timer when changing level mid-feedback', async () => {
     const { QUESTIONS } = await import('./data.js');
-    await import('./app.js');
+    await loadApp();
 
     document.dispatchEvent(new Event('DOMContentLoaded'));
 
@@ -117,7 +140,7 @@ describe('App interactivity', () => {
   it('resetScoresBtn re-renders question and enables answer buttons without soft-lock', async () => {
     const { QUESTIONS } = await import('./data.js');
     const { getState } = await import('./state.js');
-    await import('./app.js');
+    await loadApp();
 
     document.dispatchEvent(new Event('DOMContentLoaded'));
     document.getElementById('start-btn').click();
@@ -140,8 +163,8 @@ describe('App interactivity', () => {
 
   it('shuffles question order on each level start', async () => {
     const { QUESTIONS } = await import('./data.js');
-    const { __setRng } = await import('./app.js');
-    await import('./app.js');
+    const { __setRng } = await loadApp();
+    await loadApp();
 
     document.dispatchEvent(new Event('DOMContentLoaded'));
     document.getElementById('start-btn').click();
@@ -165,7 +188,7 @@ describe('App interactivity', () => {
 
   it('offers a visible replay button on level completion that restarts the level', async () => {
     const { QUESTIONS } = await import('./data.js');
-    await import('./app.js');
+    await loadApp();
 
     document.dispatchEvent(new Event('DOMContentLoaded'));
     document.getElementById('start-btn').click();
@@ -189,7 +212,7 @@ describe('App interactivity', () => {
 
   it('resumes the saved in-progress level on reload (init enters the game)', async () => {
     const { setProgress, getState } = await import('./state.js');
-    await import('./app.js');
+    await loadApp();
 
     // Persist progress like a previous session would have left behind.
     setProgress('easy', 3);
@@ -204,7 +227,7 @@ describe('App interactivity', () => {
   });
 
   it('triggers Easter Egg 1 on 5 clicks to modal footer', async () => {
-    await import('./app.js');
+    await loadApp();
     document.dispatchEvent(new Event('DOMContentLoaded'));
 
     const footer = document.querySelector('.modal__footer');
@@ -216,7 +239,7 @@ describe('App interactivity', () => {
   });
 
   it('triggers Easter Egg 2 on keyboard sequence "tense"', async () => {
-    await import('./app.js');
+    await loadApp();
     document.dispatchEvent(new Event('DOMContentLoaded'));
 
     for (const char of 'tense') {
@@ -226,7 +249,7 @@ describe('App interactivity', () => {
   });
 
   it('toggles sound on and off via the audio HUD button', async () => {
-    await import('./app.js');
+    await loadApp();
     document.dispatchEvent(new Event('DOMContentLoaded'));
 
     const soundBtn = document.getElementById('sound-toggle-btn');
@@ -243,7 +266,7 @@ describe('App interactivity', () => {
 
   it('displays personal best streaks on the level select panel', async () => {
     const { addPoint, setLevel } = await import('./state.js');
-    await import('./app.js');
+    await loadApp();
 
     setLevel('easy');
     addPoint();
@@ -259,7 +282,7 @@ describe('App interactivity', () => {
   it('launches 60s speed run attack mode with countdown and score accumulation', async () => {
     const { QUESTIONS } = await import('./data.js');
     const { getState } = await import('./state.js');
-    await import('./app.js');
+    await loadApp();
 
     document.dispatchEvent(new Event('DOMContentLoaded'));
     document.getElementById('start-btn').click();
@@ -284,7 +307,7 @@ describe('App interactivity', () => {
 
   it('handles keyboard shortcuts 1, 2, 3 to answer questions', async () => {
     const { QUESTIONS } = await import('./data.js');
-    await import('./app.js');
+    await loadApp();
 
     document.dispatchEvent(new Event('DOMContentLoaded'));
     document.getElementById('start-btn').click();
@@ -308,7 +331,7 @@ describe('App interactivity', () => {
 
   it('toggles high contrast mode via settings toolbar', async () => {
     const { getState } = await import('./state.js');
-    await import('./app.js');
+    await loadApp();
 
     document.dispatchEvent(new Event('DOMContentLoaded'));
     document.getElementById('start-btn').click();
@@ -323,7 +346,7 @@ describe('App interactivity', () => {
 
   it('filters questions by tense category focus', async () => {
     const { getState } = await import('./state.js');
-    await import('./app.js');
+    await loadApp();
 
     document.dispatchEvent(new Event('DOMContentLoaded'));
     document.getElementById('start-btn').click();
@@ -338,7 +361,7 @@ describe('App interactivity', () => {
   it('allows reviewing recorded mistakes and displays pedagogical explanation', async () => {
     const { QUESTIONS } = await import('./data.js');
     const { getState, recordMistake } = await import('./state.js');
-    await import('./app.js');
+    await loadApp();
 
     const sampleQ = QUESTIONS[0];
     recordMistake(sampleQ);

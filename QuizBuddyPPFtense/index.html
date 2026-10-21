@@ -3,9 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Practice English past, present and future tenses with QuizBuddy." />
+    <meta name="theme-color" content="#7fb5ff" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="QuizBuddy" />
     <title>QuizBuddy | Tense Trainer</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <meta name="theme-color" content="#7fb5ff" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="icons/icon-180.png" />
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
@@ -48,6 +54,11 @@
 
         <div class="panel__actions panel__actions--modes">
           <button id="speedrun-btn" class="btn btn--speedrun" type="button">⚡ Speed Run (60s Attack)</button>
+        </div>
+
+        <!-- Own row: the slot keeps its height reserved so revealing the
+             Review Mistakes button never reflows the rows below it. -->
+        <div class="panel__actions panel__actions--review">
           <button id="review-mistakes-btn" class="btn btn--mistakes panel--hidden" type="button">
             📝 Review Mistakes <span id="mistakes-count" class="badge">0</span>
           </button>
@@ -72,12 +83,14 @@
       <section id="game" class="game panel panel--hidden" aria-live="polite">
         <h2 class="visually-hidden">Tense Practice Game</h2>
         <header class="game__header">
-          <p class="game__meta" id="level-label">Level: -</p>
-          <p class="game__meta" id="question-counter">Question: 0/0</p>
-          <p class="game__meta" id="score-counter">Score: 0</p>
-          <p class="game__meta" id="streak-counter">Streak: 0</p>
-          <p class="game__meta" id="best-streak-counter">Best Streak: 0</p>
-          <p class="game__meta panel--hidden" id="timer-counter">Time: 60s</p>
+          <!-- Live readouts use font-variant-numeric: tabular-nums (the
+               `tnum` class) plus reserved widths, so counters never reflow. -->
+          <p class="game__meta tnum" id="level-label">Level: -</p>
+          <p class="game__meta tnum" id="question-counter">Question: 0/0</p>
+          <p class="game__meta tnum" id="score-counter">Score: 0</p>
+          <p class="game__meta tnum" id="streak-counter">Streak: 0</p>
+          <p class="game__meta tnum" id="best-streak-counter">Best Streak: 0</p>
+          <p class="game__meta tnum panel--hidden" id="timer-counter">Time: 60s</p>
           <button id="sound-toggle-btn" class="btn btn--sound" type="button" aria-label="Toggle Sound">🔊 Audio</button>
         </header>
 
@@ -89,9 +102,27 @@
           </div>
           <p id="sentence" class="game__sentence">Choose a level to begin.</p>
           <div class="game__actions" role="group" aria-label="Select the missing word from the options below">
-            <button type="button" class="btn btn--answer" data-option=""><span class="btn__key">1</span> <span class="btn__text"></span></button>
-            <button type="button" class="btn btn--answer" data-option=""><span class="btn__key">2</span> <span class="btn__text"></span></button>
-            <button type="button" class="btn btn--answer" data-option=""><span class="btn__key">3</span> <span class="btn__text"></span></button>
+            <button
+              type="button"
+              class="btn btn--answer"
+              data-option=""
+              data-key="1"
+              aria-label="Answer option 1"
+            ></button>
+            <button
+              type="button"
+              class="btn btn--answer"
+              data-option=""
+              data-key="2"
+              aria-label="Answer option 2"
+            ></button>
+            <button
+              type="button"
+              class="btn btn--answer"
+              data-option=""
+              data-key="3"
+              aria-label="Answer option 3"
+            ></button>
           </div>
           <div id="explanation-container" class="game__explanation-container panel--hidden" aria-live="polite">
             <p id="explanation-text" class="game__explanation"></p>

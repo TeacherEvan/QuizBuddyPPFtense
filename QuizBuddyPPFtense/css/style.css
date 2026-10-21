@@ -1,4 +1,25 @@
+/* ==========================================================================
+   QuizBuddy — Tense Trainer (visual skin)
+   --------------------------------------------------------------------------
+   Invariants enforced by this stylesheet:
+     1. No layout-thrashing animation. No transition/keyframe may touch
+        width | height | top | left | right | bottom | margin | padding.
+     2. All continuous motion is compositor-only (transform / opacity).
+     3. Every interactive element implements the six tactile states:
+        default, hover, active, focus-visible, loading, disabled.
+     4. Live readouts reserve their box (tabular-nums + min-width) so
+        counters never reflow their neighbours (CLS 0).
+     5. Hover affordances only exist on real pointers
+        (@media (hover: hover) and (pointer: fine)).
+   ========================================================================== */
+
+/* ==========================================================================
+   1. TOKENS
+   ========================================================================== */
 :root {
+  color-scheme: dark;
+
+  /* --- palette (workspace theme: deep-space neon arcade) --- */
   --color-bg: #050914;
   --color-surface: rgba(12, 22, 48, 0.72);
   --color-primary: #7fb5ff;
@@ -9,11 +30,97 @@
   --color-muted: #94a9c9;
   --color-success: #39e594;
   --color-error: #ff6378;
-  --shadow-soft:
-    0 24px 60px -12px rgba(2, 6, 23, 0.75),
-    0 0 0 1px rgba(255, 255, 255, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+
+  /* --- depth ladder: perceptual lightness steps up per z-layer --- */
+  --surface-0: #050914;
+  --surface-1: rgba(12, 22, 48, 0.72);
+  --surface-2: rgba(255, 255, 255, 0.08);
+  --surface-3: rgba(255, 255, 255, 0.12);
+
+  /* --- edges & speculars --- */
+  --edge-subtle: rgba(255, 255, 255, 0.12);
+  --edge-medium: rgba(255, 255, 255, 0.24);
+  --edge-strong: rgba(255, 255, 255, 0.35);
+  --specular: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  --specular-soft: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+
+  /* --- motion --- */
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-hover: 140ms;
+  --dur-press: 25ms;
+  --dur-reveal: 320ms;
+
+  /* --- geometry --- */
+  --radius-xl: 24px;
+  --radius-lg: 20px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+  --radius-pill: 999px;
+  --tap-min: 44px;
+
+  /* --- focus system --- */
+  --focus-ring: var(--color-primary);
+  --focus-width: 2px;
+  --focus-offset: 2px;
+
+  /* --- elevation --- */
+  --shadow-soft:
+    0 24px 60px -12px rgba(2, 6, 23, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  --shadow-raise: 0 12px 30px -8px rgba(2, 6, 23, 0.6);
+}
+
+/* ==========================================================================
+   2. RESET & BASE
+   ========================================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family:
+    'Inter',
+    'Plus Jakarta Sans',
+    'Segoe UI',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(circle at 18% 12%, rgba(127, 181, 255, 0.22) 0%, transparent 42%),
+    radial-gradient(circle at 82% 18%, rgba(212, 165, 255, 0.18) 0%, transparent 40%),
+    radial-gradient(circle at 50% 88%, rgba(100, 244, 196, 0.14) 0%, transparent 48%),
+    linear-gradient(180deg, #0b1631 0%, #050914 100%);
+  background-attachment: fixed;
+  overflow-x: hidden;
+  transition: filter 0.5s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Aurora grid overlay — decorative, never interactive. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 36px 36px;
+  -webkit-mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.85) 20%, transparent 80%);
+  mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.85) 20%, transparent 80%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .visually-hidden {
@@ -28,43 +135,14 @@
   border: 0;
 }
 
-* {
-  box-sizing: border-box;
+/* Tabular figures for every live readout — keeps digit width constant so
+   counters never oscillate or reflow their neighbours. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
 }
 
-html,
-body {
-  margin: 0;
-  min-height: 100%;
-}
-
-body {
-  font-family: 'Inter', 'Plus Jakarta Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
-  color: var(--color-text);
-  background-color: var(--color-bg);
-  background-image:
-    radial-gradient(circle at 18% 12%, rgba(127, 181, 255, 0.22) 0%, transparent 42%),
-    radial-gradient(circle at 82% 18%, rgba(212, 165, 255, 0.18) 0%, transparent 40%),
-    radial-gradient(circle at 50% 88%, rgba(100, 244, 196, 0.14) 0%, transparent 48%),
-    linear-gradient(180deg, #0b1631 0%, #050914 100%);
-  overflow-x: hidden;
-  transition: filter 0.5s ease;
-}
-
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 36px 36px;
-  mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.85) 20%, transparent 80%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Easter Egg 1: Teacher Evan's Honor Roll Theme */
+/* --- Easter egg 1: Teacher Evan's Honor Roll theme --- */
 body.easter--scholar {
   background-image:
     radial-gradient(circle at 20% 20%, rgba(255, 209, 102, 0.3) 0%, transparent 45%),
@@ -72,48 +150,82 @@ body.easter--scholar {
     linear-gradient(180deg, #161c28 0%, #080c14 100%);
 }
 
-/* Easter Egg 2: Chrono Warp Theme */
+/* --- Easter egg 2: Chrono Warp theme ---
+   The hue shift is applied once (static filter) and the "warp" pulse is a
+   compositor-only opacity/transform animation on a dedicated overlay.
+   Animating `filter` on <body> would repaint the whole document every
+   frame and blow the 16.67 ms frame budget. */
 body.easter--chrono-warp {
   filter: hue-rotate(90deg) contrast(1.1);
-  animation: warpPulse 2s infinite alternate ease-in-out;
 }
 
-@keyframes warpPulse {
-  0% {
-    filter: hue-rotate(90deg) contrast(1.1);
+body.easter--chrono-warp::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  min-height: 100vh;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(circle at 50% 45%, rgba(127, 181, 255, 0.3) 0%, transparent 62%);
+  animation: warpGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes warpGlow {
+  from {
+    opacity: 0.25;
+    transform: scale(1);
   }
-  100% {
-    filter: hue-rotate(180deg) contrast(1.25);
+  to {
+    opacity: 0.8;
+    transform: scale(1.06);
   }
 }
 
+/* ==========================================================================
+   3. GLOBAL FOCUS SYSTEM
+   ========================================================================== */
+:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* Remove the legacy default only where we supply our own ring. */
+.btn:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ==========================================================================
+   4. APP SHELL & PANELS
+   ========================================================================== */
 .app {
   position: relative;
   z-index: 1;
   min-height: 100vh;
+  min-height: 100svh;
   display: grid;
-  place-items: center;
-  padding: 1.5rem;
+  justify-items: center;
+  align-content: safe center;
+  padding: clamp(1rem, 3vw, 1.75rem);
 }
 
 .panel,
 .modal__panel {
-  width: min(740px, 94vw);
-  border-radius: 24px;
+  width: min(740px, 100%);
+  border-radius: var(--radius-xl);
   background: var(--color-surface);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--edge-subtle);
   box-shadow: var(--shadow-soft);
-  -webkit-backdrop-filter: blur(18px) saturate(150%);
-  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+  contain: layout style;
 }
 
 .panel {
   padding: 1.6rem;
 }
 
-.panel--hidden {
-  display: none;
-}
+/* The authoritative hidden utility lives in section 12 (utilities) so it
+   always wins over component rules such as `.btn { display: inline-flex }`. */
 
 .panel__title,
 .modal__title {
@@ -128,72 +240,229 @@ body.easter--chrono-warp {
   color: transparent;
 }
 
-.panel__actions,
-.game__actions {
+.panel__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.85rem;
   justify-content: center;
 }
 
+.panel__actions--modes {
+  margin-top: 1rem;
+}
+
+.panel__actions--review {
+  margin-top: 0.85rem;
+  /* Slot is always reserved so revealing the Review Mistakes button never
+     reflows the stats/toolbar rows below it. */
+  min-height: var(--tap-min);
+}
+
+/* ==========================================================================
+   5. TACTILE BUTTON SYSTEM (six states)
+   ========================================================================== */
 .btn {
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: var(--tap-min);
+  padding: 0.72rem 1.3rem;
+  border: 1px solid var(--edge-strong);
   border-radius: 14px;
-  padding: 0.78rem 1.35rem;
   color: #041126;
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
-  font-weight: 800;
+  font-family: inherit;
   font-size: 0.98rem;
+  font-weight: 800;
   letter-spacing: 0.01em;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
   cursor: pointer;
+
+  /* --- tactile material (per-variant overridable) --- */
+  --edge-offset: 4px;
+  --edge-color: #26648e;
+  --rest-shadow: 0 10px 22px rgba(0, 0, 0, 0.32);
+  --hover-shadow: 0 16px 28px rgba(100, 244, 196, 0.22);
+  --press-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  --specular-rgb: 255, 255, 255;
+  --specular-alpha: 0.65;
+
   box-shadow:
-    0 4px 0 #26648e,
-    0 10px 22px rgba(0, 0, 0, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    0 var(--edge-offset) 0 var(--edge-color),
+    var(--rest-shadow),
+    inset 0 1px 0 rgba(var(--specular-rgb), var(--specular-alpha));
+
   transition:
-    transform 0.2s var(--ease-spring),
-    box-shadow 0.2s var(--ease-spring),
-    filter 0.2s ease,
-    opacity 0.2s ease;
-  transform: translateZ(0);
+    transform var(--dur-hover) var(--ease-spring),
+    box-shadow var(--dur-hover) var(--ease-spring),
+    border-color var(--dur-hover) var(--ease-spring),
+    opacity 200ms ease;
+
+  /* Interaction hygiene: no tap delay, no text selection, no blue flash. */
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.btn:hover:not(:disabled) {
-  transform: translateY(-3px);
-  filter: brightness(1.06);
+/* Hover glow veil — opacity-only, so the transition never repaints text. */
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0.04) 40%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-hover) var(--ease-spring);
+}
+
+/* --- state 2: hover (pointer devices only — no hover-sticking on touch) --- */
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover:not(:disabled):not([aria-disabled='true']) {
+    transform: translate3d(0, -2px, 0);
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow:
+      0 calc(var(--edge-offset) + 2px) 0 var(--edge-color),
+      var(--hover-shadow),
+      inset 0 1px 0 rgba(var(--specular-rgb), calc(var(--specular-alpha) + 0.15));
+  }
+
+  .btn:hover:not(:disabled):not([aria-disabled='true'])::after {
+    opacity: 1;
+  }
+}
+
+/* --- state 3: active / pressed --- */
+.btn:active:not(:disabled):not([aria-disabled='true']) {
+  transition-duration: var(--dur-press);
+  transform: translate3d(0, 2px, 0) scale(0.985);
   box-shadow:
-    0 7px 0 #26648e,
-    0 16px 28px rgba(100, 244, 196, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    0 max(0px, calc(var(--edge-offset) - 2px)) 0 var(--edge-color),
+    var(--press-shadow),
+    inset 0 2px 4px rgba(0, 0, 0, 0.35);
 }
 
-.btn:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow:
-    0 2px 0 #26648e,
-    0 4px 10px rgba(0, 0, 0, 0.25);
+.btn:active:not(:disabled):not([aria-disabled='true'])::after {
+  opacity: 0;
 }
 
-.btn:disabled {
-  opacity: 0.55;
+/* --- state 4: focus-visible (see global :focus-visible ring above) --- */
+
+/* --- state 5: loading (reserved for future async actions) --- */
+.btn[data-loading='true'] {
+  cursor: wait;
+}
+
+/* --- state 6: disabled --- */
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.45;
   cursor: not-allowed;
+  filter: grayscale(40%);
+  box-shadow: none;
   transform: none;
 }
 
+/* --- variants ----------------------------------------------------------- */
 .btn--primary {
+  display: flex;
+  width: fit-content;
   margin-inline: auto;
-  display: block;
 }
 
 .btn--level {
   min-width: 148px;
 }
 
-.btn--answer {
-  min-width: 144px;
+.btn--speedrun {
+  --edge-color: #b32a48;
+  --rest-shadow: 0 10px 22px rgba(255, 94, 126, 0.35);
+  --hover-shadow: 0 16px 30px rgba(255, 94, 126, 0.42);
+  --specular-alpha: 0.6;
+  background: linear-gradient(135deg, #ff9e7d 0%, #ff5e7e 100%);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
+.btn--mistakes {
+  --edge-color: #a83320;
+  --rest-shadow: 0 10px 22px rgba(255, 107, 70, 0.32);
+  --hover-shadow: 0 16px 30px rgba(255, 107, 70, 0.4);
+  background: linear-gradient(135deg, #ff8c42 0%, #ff4b4b 100%);
+  color: #fff;
+  /* Reserved width: the count badge never resizes the button. */
+  min-width: 15.5rem;
+  white-space: nowrap;
+}
+
+/* --- pill / ghost variants (flat material, no chunky edge) --- */
+.btn--chip,
+.btn--toolbar,
+.btn--sound {
+  --edge-offset: 0px;
+  --edge-color: transparent;
+  --rest-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+  --hover-shadow: 0 6px 16px rgba(127, 181, 255, 0.2);
+  --press-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  --specular-alpha: 0.12;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--color-text);
+  box-shadow: var(--rest-shadow);
+}
+
+.btn--chip {
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition:
+    transform var(--dur-hover) var(--ease-spring),
+    box-shadow var(--dur-hover) var(--ease-spring),
+    border-color var(--dur-hover) var(--ease-spring),
+    background-color var(--dur-hover) var(--ease-spring),
+    opacity 200ms ease;
+}
+
+.btn--chip-active {
+  background: linear-gradient(135deg, rgba(127, 181, 255, 0.35), rgba(100, 244, 196, 0.35));
+  border-color: var(--color-primary);
+  color: #fff;
+  box-shadow:
+    0 0 12px rgba(127, 181, 255, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.btn--toolbar {
+  padding: 0.45rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+}
+
+.btn--sound {
+  padding: 0.38rem 0.85rem;
+  font-size: 0.82rem;
+  border-radius: var(--radius-pill);
+}
+
+.btn--sound.sound--muted {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+/* ==========================================================================
+   6. MODAL
+   ========================================================================== */
 .modal {
   position: fixed;
   inset: 0;
@@ -205,8 +474,8 @@ body.easter--chrono-warp {
   transform: scale(0.98);
   pointer-events: none;
   transition:
-    transform 0.28s ease,
-    opacity 0.28s ease;
+    transform var(--dur-reveal) var(--ease-out),
+    opacity var(--dur-reveal) var(--ease-out);
   z-index: 100;
 }
 
@@ -235,30 +504,45 @@ body.easter--chrono-warp {
   opacity: 0.85;
   cursor: pointer;
   user-select: none;
-  transition: color 0.2s ease, opacity 0.2s ease;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  transition:
+    color 0.2s ease,
+    opacity 0.2s ease;
 }
 
-.modal__footer:hover {
-  color: var(--color-gold);
-  opacity: 1;
+@media (hover: hover) and (pointer: fine) {
+  .modal__footer:hover {
+    color: var(--color-gold);
+    opacity: 1;
+  }
 }
 
-.panel__actions--modes {
-  margin-top: 1rem;
+/* ==========================================================================
+   7. LEVEL SELECT
+   ========================================================================== */
+.filter-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  margin: 1.1rem 0 0.5rem;
+  flex-wrap: wrap;
 }
 
-.btn--speedrun {
-  background: linear-gradient(135deg, #ff9e7d 0%, #ff5e7e 100%);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.4);
-  box-shadow:
-    0 4px 0 #b32a48,
-    0 10px 22px rgba(255, 94, 126, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+.filter-group__label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.btn--speedrun:hover {
-  filter: brightness(1.12);
+.filter-group__chips {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .level-stats {
@@ -268,9 +552,10 @@ body.easter--chrono-warp {
   justify-content: center;
   margin-top: 1.5rem;
   padding: 1rem 1.25rem;
-  border-radius: 16px;
+  border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--specular-soft);
 }
 
 .level-stats__item {
@@ -278,34 +563,35 @@ body.easter--chrono-warp {
   font-size: 0.88rem;
   font-weight: 700;
   color: var(--color-muted);
+  white-space: nowrap;
 }
 
 .level-stats__item span {
+  display: inline-block;
+  min-width: 2ch;
+  text-align: right;
   color: var(--color-gold);
   font-size: 1rem;
   font-variant-numeric: tabular-nums;
 }
 
-.btn--sound {
-  padding: 0.38rem 0.85rem;
-  font-size: 0.82rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--color-text);
-  box-shadow: none;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+.toolbar {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
 }
 
-.btn--sound:hover {
-  background: rgba(255, 255, 255, 0.16);
-  transform: translateY(-1px);
+.toolbar .btn--toolbar {
+  /* Reserved width: the label swaps between "Normal"/"High" and
+     "Neo"/"8-Bit" and must never reflow the toolbar. */
+  min-width: 9.25rem;
 }
 
-.btn--sound.sound--muted {
-  opacity: 0.55;
-  text-decoration: line-through;
-}
-
+/* ==========================================================================
+   8. GAME
+   ========================================================================== */
 .game__header {
   display: flex;
   flex-wrap: wrap;
@@ -318,66 +604,312 @@ body.easter--chrono-warp {
 .game__meta {
   margin: 0;
   padding: 0.42rem 0.82rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: var(--specular-soft);
   font-size: 0.86rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* Reserved widths for every live readout — the pill box never changes, so a
+   counter can never reflow the header. Widths are the measured maximum of
+   the widest value the readout can hold. */
+#level-label {
+  min-width: 10em;
+}
+
+#question-counter {
+  min-width: 10.6em;
+}
+
+#score-counter {
+  min-width: 7.2em;
+}
+
+#streak-counter {
+  min-width: 7.8em;
+}
+
+#best-streak-counter {
+  min-width: 18.2em;
+}
+
+#timer-counter {
+  min-width: 6.9em;
+}
+
+/* The speed-run timer keeps its slot reserved when idle, so revealing it
+   does not reflow the header. */
+#timer-counter.panel--hidden {
+  display: block;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.btn--sound {
+  min-width: 5.75rem;
 }
 
 .game__card {
   position: relative;
   overflow: hidden;
+  /* Column layout: the insight zone absorbs the slack so the card keeps a
+     constant height while the grammar insight is revealed. */
+  display: flex;
+  flex-direction: column;
   margin: 1.15rem 0;
   padding: 1.75rem 1.5rem;
-  border-radius: 20px;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(160deg, var(--surface-2) 0%, rgba(255, 255, 255, 0.03) 100%);
   border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  transition: border-color 0.35s ease, box-shadow 0.35s ease;
-  transform: translateZ(0);
+  box-shadow: var(--specular);
+  transition:
+    border-color 0.35s ease,
+    box-shadow 0.35s ease;
+  contain: layout paint;
+  min-height: 23rem;
 }
 
 .game__card[data-streak-tier='1'] {
   border-color: rgba(100, 244, 196, 0.48);
-  box-shadow: 0 0 28px rgba(100, 244, 196, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  box-shadow:
+    0 0 28px rgba(100, 244, 196, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .game__card[data-streak-tier='2'] {
   border-color: rgba(212, 165, 255, 0.65);
-  box-shadow: 0 0 38px rgba(212, 165, 255, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 0 38px rgba(212, 165, 255, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .game__card[data-streak-tier='3'] {
   border-color: rgba(255, 209, 102, 0.8);
-  box-shadow: 0 0 46px rgba(255, 209, 102, 0.32), inset 0 1px 0 rgba(255, 209, 102, 0.4);
+  box-shadow:
+    0 0 46px rgba(255, 209, 102, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.game__tags {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.78rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  background: rgba(0, 0, 0, 0.35);
+  margin-left: 0.35rem;
+}
+
+.badge--tense {
+  /* Reserved width: the tense label changes length per question
+     ("PAST TENSE" … "PRESENT TENSE"). */
+  min-width: 10em;
+  text-align: center;
+  margin-left: 0;
+  background: rgba(127, 181, 255, 0.2);
+  border: 1px solid rgba(127, 181, 255, 0.4);
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+#mistakes-count {
+  min-width: 2.2em;
+  padding-left: 0;
+  padding-right: 0;
+  text-align: center;
+}
+
+.game__hint {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+/* The keyboard-shortcut hint is meaningless without a physical keyboard, and
+   it would wrap the tag row on narrow viewports (which resizes the card).
+   It is therefore dropped on touch devices and on very small screens. */
+@media (hover: none), (max-width: 420px) {
+  .game__hint {
+    display: none;
+  }
 }
 
 .game__sentence {
   position: relative;
   z-index: 1;
+  flex: 0 0 auto;
+  /* Top aligned inside its reserved box: the sentence must never jump when
+     the next question happens to be one line shorter. */
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
   margin: 0 0 1.4rem;
   text-align: center;
   font-size: clamp(1.18rem, 2.4vw, 1.52rem);
   font-weight: 600;
   line-height: 1.5;
   letter-spacing: -0.01em;
+  /* Two lines are always reserved so a long/short sentence never
+     resizes the card and shifts the controls below it. */
+  min-height: 3em;
+}
+
+.game__actions {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.btn--answer {
+  min-width: 0;
+  width: 100%;
+  /* Two lines of option text are always reserved: a long option (e.g.
+     "will have been collecting") must not change the button height. */
+  min-height: 4.5rem;
+  padding: 0.78rem 0.9rem;
+}
+
+/* Tactile keycap hint for the keyboard shortcut. */
+.btn--answer::before {
+  content: attr(data-key);
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 7px;
+  background: rgba(4, 17, 38, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  color: var(--color-primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  transition: transform var(--dur-press) var(--ease-spring);
+}
+
+.btn--answer:active::before {
+  transform: translate3d(0, 1px, 0);
+}
+
+/* Answer reveal states (set by the app after a response). */
+.btn--answer:disabled {
+  opacity: 0.48;
+  filter: saturate(0.55);
+}
+
+.btn--answer.btn--is-correct {
+  opacity: 1;
+  filter: none;
+  color: #052015;
+  border-color: rgba(57, 229, 148, 0.9);
+  background: linear-gradient(135deg, #4bf0a4 0%, #22b87c 100%);
+  box-shadow:
+    0 4px 0 #16714a,
+    0 10px 22px rgba(57, 229, 148, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.btn--answer.btn--is-wrong {
+  opacity: 1;
+  filter: none;
+  color: #2a0410;
+  border-color: rgba(255, 99, 120, 0.9);
+  background: linear-gradient(135deg, #ff8fa0 0%, #ff6378 100%);
+  box-shadow:
+    0 4px 0 #8d2033,
+    0 10px 22px rgba(255, 99, 120, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.btn--answer.btn--is-locked {
+  opacity: 0.65;
+  filter: saturate(0.55);
+}
+
+/* The insight slot reserves its height so revealing the grammar insight
+   never moves the feedback line. It carries no visual styling of its own:
+   the visible card hugs the text, so the reserved area below it reads as
+   ordinary card padding instead of an empty box. */
+.game__explanation-container {
+  flex: 1 1 auto;
+  margin: 0.85rem 0 0.4rem;
+  min-height: 4.4rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+/* The insight slot stays in the layout when idle so its box (and the card
+   height) never changes; the empty state shows a dimmed hint instead.
+   `display: flex` is repeated here so the idle hint keeps the same box
+   behaviour as the filled state (the ID selector outranks the class rule). */
+#explanation-container.panel--hidden {
+  display: flex;
+  visibility: visible;
+  pointer-events: none;
+}
+
+.game__explanation {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  background: rgba(127, 181, 255, 0.08);
+  border: 1px solid rgba(127, 181, 255, 0.25);
+  box-shadow: var(--specular-soft);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: #dce9ff;
+  text-align: left;
+}
+
+.game__explanation:empty::before {
+  content: '💡 A grammar insight unlocks after you answer.';
+  color: var(--color-muted);
+  font-size: 0.86rem;
+  font-style: italic;
+  opacity: 0.75;
 }
 
 .game__feedback {
-  min-height: 1.5rem;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3.2rem;
   margin: 1.1rem 0 0;
   text-align: center;
   font-weight: 700;
   font-size: 1.05rem;
+  line-height: 1.5;
 }
 
 .game__burst {
   position: absolute;
   inset: 10% 25%;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: radial-gradient(circle, rgba(57, 229, 148, 0.85), rgba(57, 229, 148, 0));
   opacity: 0;
   transform: scale(0.2);
@@ -463,154 +995,129 @@ body.easter--chrono-warp {
   }
 }
 
-@media (max-width: 540px) {
-  .game__actions {
-    flex-direction: column;
+/* ==========================================================================
+   9. RESPONSIVE
+   The reservations below are sized from the measured worst case of every
+   variable text block (sentence / grammar insight / feedback) at each
+   breakpoint, so the card can never change height between questions.
+   ========================================================================== */
+@media (max-width: 759px) {
+  /* Tablet: the card narrows, so the insight/feedback wrap deeper. */
+  .game__card {
+    min-height: 26rem;
   }
 
-  .btn--answer {
+  .game__explanation-container {
+    min-height: 5.7rem;
+  }
+
+  .game__feedback {
+    min-height: 4.8rem;
+  }
+}
+
+@media (max-width: 540px) {
+  .game__actions {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    padding: 1.25rem 1rem;
+  }
+
+  .game__card {
+    padding: 1.35rem 1.1rem;
+    min-height: 37rem;
+  }
+
+  /* Compact telemetry: smaller pills keep the HUD to three tidy rows. */
+  .game__meta {
+    font-size: 0.75rem;
+    padding: 0.36rem 0.7rem;
+  }
+
+  /* Tidy chip flow, and a row order that packs the HUD into three rows. */
+  .game__header {
+    justify-content: flex-start;
+  }
+
+  #timer-counter {
+    order: 1;
+  }
+
+  #best-streak-counter {
+    order: 2;
+  }
+
+  #sound-toggle-btn {
+    order: 3;
+  }
+
+  .game__sentence {
+    min-height: 5em;
+  }
+
+  .game__explanation-container {
+    min-height: 8.5rem;
+  }
+
+  .game__feedback {
+    min-height: 5.5rem;
+    font-size: 0.95rem;
+  }
+
+  .level-stats {
+    gap: 0.6rem;
+    padding: 0.85rem 1rem;
+  }
+
+  .btn--mistakes {
     width: 100%;
   }
 }
 
-/* Next-Gen Styling: Tense Filters, Explanation Pill, Review Panel & High Contrast */
-.filter-group {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
-  margin: 1.1rem 0 0.5rem;
-  flex-wrap: wrap;
+@media (max-width: 360px) {
+  .game__card {
+    min-height: 42rem;
+  }
+
+  .game__sentence {
+    min-height: 6.5em;
+  }
+
+  .game__explanation-container {
+    min-height: 11rem;
+  }
+
+  .game__feedback {
+    min-height: 7rem;
+  }
 }
 
-.filter-group__label {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--color-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+@media (max-width: 380px) {
+  .game__hint {
+    display: none;
+  }
 }
 
-.filter-group__chips {
-  display: flex;
-  gap: 0.45rem;
-  flex-wrap: wrap;
-}
-
-.btn--chip {
-  padding: 0.4rem 0.85rem;
-  border-radius: 999px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  color: var(--color-text);
-  box-shadow: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn--chip:hover {
-  background: rgba(127, 181, 255, 0.2);
-  border-color: var(--color-primary);
-  transform: translateY(-1px);
-}
-
-.btn--chip-active {
-  background: linear-gradient(135deg, rgba(127, 181, 255, 0.35), rgba(100, 244, 196, 0.35));
-  border-color: var(--color-primary);
-  color: #fff;
-  box-shadow: 0 0 12px rgba(127, 181, 255, 0.4);
-}
-
-.btn--mistakes {
-  background: linear-gradient(135deg, #ff8c42 0%, #ff4b4b 100%);
-  color: #fff;
-}
-
-.badge {
-  display: inline-block;
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 800;
-  background: rgba(0, 0, 0, 0.35);
-  margin-left: 0.35rem;
-}
-
-.game__tags {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.75rem;
-  font-size: 0.85rem;
-}
-
-.badge--tense {
-  background: rgba(127, 181, 255, 0.2);
-  border: 1px solid rgba(127, 181, 255, 0.4);
-  color: var(--color-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.game__hint {
-  color: var(--color-muted);
-  font-size: 0.78rem;
-}
-
-.game__explanation-container {
-  margin: 0.85rem 0 0.4rem;
-  padding: 0.75rem 1rem;
-  border-radius: 12px;
-  background: rgba(127, 181, 255, 0.08);
-  border: 1px solid rgba(127, 181, 255, 0.25);
-}
-
-.game__explanation {
-  margin: 0;
-  font-size: 0.92rem;
-  line-height: 1.45;
-  color: #dce9ff;
-  text-align: left;
-}
-
-.toolbar {
-  display: flex;
-  justify-content: center;
-  gap: 0.75rem;
-  margin-top: 1rem;
-  flex-wrap: wrap;
-}
-
-.btn--toolbar {
-  padding: 0.45rem 0.9rem;
-  font-size: 0.82rem;
-  font-weight: 600;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  color: var(--color-text);
-  box-shadow: none;
-  cursor: pointer;
-}
-
-.btn--toolbar:hover {
-  background: rgba(255, 255, 255, 0.16);
-  transform: translateY(-1px);
-}
-
-/* High Contrast Accessibility Mode */
+/* ==========================================================================
+   10. HIGH CONTRAST MODE (accessibility)
+   ========================================================================== */
 body.theme-high-contrast {
   --color-bg: #000000;
-  --color-surface: #0a0a0a;
+  --color-surface: #000000;
   --color-text: #ffffff;
   --color-primary: #ffff00;
   --color-secondary: #00ffff;
   --color-muted: #e0e0e0;
   --color-success: #00ff66;
   --color-error: #ff3333;
+  --edge-subtle: #ffffff;
+  --edge-medium: #ffffff;
+  --edge-strong: #ffffff;
+  --focus-ring: #00ffff;
   background: #000000 !important;
+  background-image: none !important;
 }
 
 body.theme-high-contrast .panel,
@@ -620,15 +1127,23 @@ body.theme-high-contrast .modal__panel {
   box-shadow: none;
 }
 
+body.theme-high-contrast .panel__title,
+body.theme-high-contrast .modal__title {
+  background: none;
+  color: #ffff00;
+  -webkit-text-fill-color: #ffff00;
+}
+
 body.theme-high-contrast .btn {
   border: 2px solid #ffffff;
   color: #000000;
   background: #ffff00;
   font-weight: 900;
+  box-shadow: none;
 }
 
-body.theme-high-contrast .btn:hover {
-  background: #00ffff;
+body.theme-high-contrast .btn::after {
+  display: none;
 }
 
 body.theme-high-contrast .btn--answer {
@@ -637,7 +1152,145 @@ body.theme-high-contrast .btn--answer {
   color: #ffffff;
 }
 
-body.theme-high-contrast .btn--answer:hover {
+body.theme-high-contrast .btn--answer.btn--is-correct {
+  background: #00ff66;
+  color: #000000;
+  border-color: #ffffff;
+}
+
+body.theme-high-contrast .btn--answer.btn--is-wrong {
+  background: #ff3333;
+  color: #000000;
+  border-color: #ffffff;
+}
+
+body.theme-high-contrast .btn--answer::before {
+  background: #000000;
+  border-color: #ffff00;
+  color: #ffff00;
+}
+
+body.theme-high-contrast .btn--chip,
+body.theme-high-contrast .btn--toolbar,
+body.theme-high-contrast .btn--sound {
+  background: #000000;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+}
+
+body.theme-high-contrast .btn--chip-active {
   background: #ffff00;
   color: #000000;
+  border-color: #ffffff;
+  box-shadow: none;
+}
+
+body.theme-high-contrast .game__meta,
+body.theme-high-contrast .level-stats,
+body.theme-high-contrast .game__card {
+  background: #000000;
+  border: 1px solid #ffffff;
+  box-shadow: none;
+}
+
+body.theme-high-contrast .game__explanation {
+  background: #000000;
+  border: 2px solid #ffffff;
+  box-shadow: none;
+}
+
+body.theme-high-contrast .badge--tense {
+  background: #000000;
+  border: 2px solid #ffff00;
+  color: #ffff00;
+}
+
+body.theme-high-contrast .badge {
+  background: #000000;
+  color: #ffffff;
+  border: 1px solid #ffffff;
+}
+
+body.theme-high-contrast .game__explanation {
+  color: #ffffff;
+}
+
+body.theme-high-contrast .level-stats__item span {
+  color: #ffff00;
+}
+
+body.theme-high-contrast .game__hint,
+body.theme-high-contrast .filter-group__label {
+  color: #e0e0e0;
+}
+
+body.theme-high-contrast .modal {
+  background: rgba(0, 0, 0, 0.92);
+}
+
+/* ==========================================================================
+   11. UTILITIES
+   Declared last so they always win over component rules (e.g. `.btn` sets
+   `display: inline-flex`, which must not defeat the hidden state).
+   ========================================================================== */
+.panel--hidden {
+  display: none;
+}
+
+/* ==========================================================================
+   12. REDUCED MOTION GUARD
+   Spatial translations collapse; gentle indicator/feedback colour stays.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .btn,
+  .btn::after,
+  .btn--answer::before,
+  .modal,
+  .game__card,
+  .game__burst {
+    transform: none !important;
+  }
+
+  .game--correct,
+  .game--incorrect {
+    animation: none !important;
+    opacity: 1;
+  }
+
+  /* The correct-answer flash stays, but as a pure opacity cue — no
+     scaling, so nothing moves. */
+  .game--correct .game__burst {
+    animation: burstFade 0.55s ease !important;
+  }
+
+  body.easter--chrono-warp::after {
+    animation: none !important;
+    opacity: 0.5;
+  }
+
+  .feedback--success,
+  .feedback--error {
+    text-shadow: none;
+  }
+}
+
+@keyframes burstFade {
+  0% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
 }
