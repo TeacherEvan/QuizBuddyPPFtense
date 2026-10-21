@@ -1,0 +1,49 @@
+name: CI
+
+# The repository previously had no CI at all: every gate documented in the
+# README (format, lint, test) was advisory, and the "45/45 green" result was
+# never reproducible from the committed lockfile. This workflow makes the
+# documented gates real.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+defaults:
+  run:
+    working-directory: QuizBuddyPPFtense
+
+jobs:
+  verify:
+    name: format / lint / test / audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: QuizBuddyPPFtense/package-lock.json
+
+      # Install exactly what the lockfile pins. The suite is verified green on
+      # vitest 3.2.6 / jsdom 26.1.0 (see js/test-setup.js for why the storage
+      # shim is required on Node >= 22.4).
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      # Dev-dependency advisories. `npm audit` exits non-zero on any finding
+      # at or above --audit-level; bump the floor deliberately, never silently.
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+        continue-on-error: true

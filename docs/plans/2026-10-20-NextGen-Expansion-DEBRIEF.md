@@ -59,7 +59,17 @@ Implemented across:
 - `npm test`: 4 test suites passed, 45/45 tests passing.
 - `npm run lint`: 0 errors, 0 warnings.
 
-## 10. Playwright
+## 10. JSDOM (NOT Playwright)
+
+> **⚠️ Corrected 2026-10-21.** This section was originally headed "Playwright",
+> but the body describes jsdom. No browser was ever opened during that run —
+> the archived plan records the gap explicitly: *"LOW-1: No Playwright E2E
+> suite (static app, manual `curl -I` only)"*. That is precisely why the
+> browser-only defects listed in
+> [`docs/audit/SURGICAL-AUDIT-2026-10-21.md`](../docs/audit/SURGICAL-AUDIT-2026-10-21.md)
+> (accessibility-tree leak, service-worker stale build, offline failure) were
+> not observed by this review.
+
 JSDOM full DOM event simulation verifies modal interactions, keyboard shortcuts, review mode transitions, audio toggles, and state persistence.
 
 ## 11. Consistency Review

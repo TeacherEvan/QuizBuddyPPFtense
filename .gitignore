@@ -2,6 +2,10 @@
 .env*
 node_modules/
 *.log
+# Stray root-level lockfile from a `npm install` run in the repo root. The
+# real lockfile is QuizBuddyPPFtense/package-lock.json; there is no root
+# package.json, so a root lockfile is meaningless and shadows the real one.
+/package-lock.json
 # Code-review skill artifacts (advisory, not project source)
 audit_report.md
 review_findings.md
