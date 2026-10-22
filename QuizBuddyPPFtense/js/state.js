@@ -96,9 +96,7 @@ const safeParse = (rawValue) => {
         ? parsed.bestStreak
         : Math.max(bestStreaks.easy, bestStreaks.medium, bestStreaks.advance);
 
-      const mistakes = Array.isArray(parsed.mistakes)
-        ? parsed.mistakes.map(normalizeMistake).filter(Boolean)
-        : [];
+      const mistakes = Array.isArray(parsed.mistakes) ? parsed.mistakes.map(normalizeMistake).filter(Boolean) : [];
 
       const activeCategoryFilter = VALID_CATEGORIES.includes(parsed.activeCategoryFilter)
         ? parsed.activeCategoryFilter

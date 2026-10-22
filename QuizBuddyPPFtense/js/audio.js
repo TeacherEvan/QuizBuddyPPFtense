@@ -75,13 +75,16 @@ export const playSound = (name) => {
     masterGain.connect(ctx.destination);
 
     const autoDisconnect = (durationSec) => {
-      window.setTimeout(() => {
-        try {
-          masterGain.disconnect();
-        } catch {
-          // ignore already disconnected node
-        }
-      }, Math.ceil(durationSec * 1000) + 50);
+      window.setTimeout(
+        () => {
+          try {
+            masterGain.disconnect();
+          } catch {
+            // ignore already disconnected node
+          }
+        },
+        Math.ceil(durationSec * 1000) + 50
+      );
     };
 
     if (name === 'click') {
