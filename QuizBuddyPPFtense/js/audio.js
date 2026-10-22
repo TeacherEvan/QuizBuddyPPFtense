@@ -74,6 +74,16 @@ export const playSound = (name) => {
     masterGain.gain.setValueAtTime(vol, now);
     masterGain.connect(ctx.destination);
 
+    const autoDisconnect = (durationSec) => {
+      window.setTimeout(() => {
+        try {
+          masterGain.disconnect();
+        } catch {
+          // ignore already disconnected node
+        }
+      }, Math.ceil(durationSec * 1000) + 50);
+    };
+
     if (name === 'click') {
       triggerHaptic(15);
       const osc = ctx.createOscillator();
@@ -87,6 +97,7 @@ export const playSound = (name) => {
       gain.connect(masterGain);
       osc.start(now);
       osc.stop(now + 0.04);
+      autoDisconnect(0.05);
     } else if (name === 'correct') {
       triggerHaptic([30, 40, 30]);
       if (soundTheme === '8bit') {
@@ -99,12 +110,13 @@ export const playSound = (name) => {
           const t = now + idx * 0.04;
           osc.frequency.setValueAtTime(freq, t);
           gain.gain.setValueAtTime(0.12, t);
-          gain.gain.setValueAtTime(0.001, t + 0.038);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.038);
           osc.connect(gain);
           gain.connect(masterGain);
           osc.start(t);
           osc.stop(t + 0.04);
         });
+        autoDisconnect(0.25);
       } else {
         // Neo harmonic chime
         const freqs = [523.25, 659.25, 783.99];
@@ -121,12 +133,13 @@ export const playSound = (name) => {
           osc.start(now + idx * 0.045);
           osc.stop(now + 0.4);
         });
+        autoDisconnect(0.45);
       }
     } else if (name === 'incorrect') {
       triggerHaptic(80);
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = soundTheme === '8bit' ? 'sawtooth' : 'sawtooth';
+      osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(soundTheme === '8bit' ? 140 : 160, now);
       osc.frequency.exponentialRampToValueAtTime(soundTheme === '8bit' ? 65 : 90, now + 0.18);
       gain.gain.setValueAtTime(0.16, now);
@@ -135,6 +148,7 @@ export const playSound = (name) => {
       gain.connect(masterGain);
       osc.start(now);
       osc.stop(now + 0.2);
+      autoDisconnect(0.25);
     } else if (name === 'milestone') {
       triggerHaptic([50, 50, 80]);
       const notes = soundTheme === '8bit' ? [523.25, 659.25, 783.99, 1046.5, 1318.51] : [523.25, 783.99, 1046.5];
@@ -152,6 +166,7 @@ export const playSound = (name) => {
         osc.start(start);
         osc.stop(start + 0.31);
       });
+      autoDisconnect(0.5);
     } else if (name === 'warp') {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -164,6 +179,7 @@ export const playSound = (name) => {
       gain.connect(masterGain);
       osc.start(now);
       osc.stop(now + 0.38);
+      autoDisconnect(0.42);
     } else if (name === 'countdown') {
       triggerHaptic(20);
       const osc = ctx.createOscillator();
@@ -176,6 +192,7 @@ export const playSound = (name) => {
       gain.connect(masterGain);
       osc.start(now);
       osc.stop(now + 0.05);
+      autoDisconnect(0.08);
     }
   } catch {
     // Audio playback error or disabled in environment - fails gracefully

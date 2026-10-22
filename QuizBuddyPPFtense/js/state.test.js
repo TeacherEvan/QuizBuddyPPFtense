@@ -181,6 +181,24 @@ describe('mistake tracking, review mode, categories and accessibility state', ()
     expect(getState().mistakes).toHaveLength(1);
   });
 
+  it('rejects poisoned mistakes missing options or correct answer without throwing', () => {
+    localStorage.setItem(
+      'quizbuddy_scores_v1',
+      JSON.stringify({
+        scores: { easy: 0, medium: 0, advance: 0 },
+        mistakes: [
+          { id: 'poison1', sentence: 'Missing options' },
+          { id: 'poison2', sentence: 'Empty options', options: [], correct: 'a' },
+          { id: 'poison3', sentence: 'Invalid correct', options: ['a', 'b', 'c'], correct: '' },
+          { id: 'good', sentence: 'Valid', options: ['a', 'b', 'c'], correct: 'a' }
+        ]
+      })
+    );
+    expect(() => loadScores()).not.toThrow();
+    expect(getState().mistakes).toHaveLength(1);
+    expect(getState().mistakes[0].sentence).toBe('Valid');
+  });
+
   it('resolves mistake when answered correctly', () => {
     const q1 = { sentence: 'Sentence A', options: ['a', 'b'], correct: 'a' };
     const q2 = { sentence: 'Sentence B', options: ['c', 'd'], correct: 'c' };

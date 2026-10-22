@@ -6,6 +6,7 @@ import {
   getState,
   incrementIndex,
   loadScores,
+  resetCurrentIndexOnly,
   resetIndex,
   resetScores,
   resetStreak,
@@ -18,7 +19,8 @@ import {
   startReviewMode,
   exitReviewMode,
   setCategoryFilter,
-  toggleHighContrast
+  toggleHighContrast,
+  setSoundTheme as setStoreSoundTheme
 } from './state.js';
 
 const LEVEL_LABELS = {
@@ -52,8 +54,8 @@ let activeOptionOrder = [];
 const buildActiveQuestions = (level) => {
   const state = getState();
   if (state.reviewMode) {
-    activeQuestions = [...state.mistakes];
-    activeOptionOrder = activeQuestions.map(() => [0, 1, 2]);
+    activeQuestions = shuffle([...state.mistakes]);
+    activeOptionOrder = activeQuestions.map(() => shuffle([0, 1, 2]));
     return;
   }
 
@@ -76,6 +78,7 @@ const pluralize = (count, singular) => `${count} ${singular}${count === 1 ? '' :
 let pendingAdvanceTimer = null;
 let speedRunInterval = null;
 let eventsController = null;
+let lastEndedSpeedRun = false;
 // Every controller this module instance has ever created. Abort ALL of them on
 // teardown: a single leaked controller keeps a stale keydown listener on
 // `window`, and a stale instance answers with its own question bank.
@@ -126,6 +129,11 @@ const updateLeaderboardStats = () => {
       reviewMistakesBtn.classList.add('panel--hidden');
     }
   }
+
+  const activeCat = state.activeCategoryFilter || 'all';
+  document.querySelectorAll('[data-category]').forEach((chip) => {
+    chip.classList.toggle('btn--chip-active', chip.dataset.category === activeCat);
+  });
 
   if (contrastBtn) {
     contrastBtn.textContent = state.highContrast ? '👁️ Contrast: High' : '👁️ Contrast: Normal';
@@ -226,8 +234,10 @@ const renderSentenceWithBlank = (sentence) => {
 };
 
 const handleSpeedRunComplete = () => {
+  cancelPendingAdvance();
   stopSpeedRunTimer();
   const finalScore = stopSpeedRun();
+  lastEndedSpeedRun = true;
   playSound('milestone');
 
   const sentenceEl = document.getElementById('sentence');
@@ -265,7 +275,7 @@ const renderQuestion = () => {
   if (!question) {
     if (state.speedRunActive) {
       buildActiveQuestions(state.currentLevel);
-      resetIndex();
+      resetCurrentIndexOnly();
       renderQuestion();
       return;
     }
@@ -295,9 +305,9 @@ const renderQuestion = () => {
   if (feedbackEl) feedbackEl.textContent = '';
   const order = activeOptionOrder[state.currentIndex] || [0, 1, 2];
   answerButtons.forEach((button, index) => {
-    const option = question.options[order[index]];
-    button.textContent = option || '';
-    button.dataset.option = option || '';
+    const option = question.options?.[order[index]] ?? '';
+    button.textContent = option;
+    button.dataset.option = option;
     // The keycap pseudo-element is decorative: keep the accessible name
     // equal to the visible option text.
     if (option) {
@@ -487,6 +497,8 @@ const setupEvents = () => {
     () => {
       playSound('click');
       welcomeModal?.classList.remove('modal--visible');
+      welcomeModal?.setAttribute('inert', '');
+      welcomeModal?.setAttribute('aria-hidden', 'true');
       levelSelect?.classList.remove('panel--hidden');
       updateLeaderboardStats();
       levelButtons[0]?.focus();
@@ -559,6 +571,7 @@ const setupEvents = () => {
       playSound('click');
       const newTheme = getSoundTheme() === 'neo' ? '8bit' : 'neo';
       setSoundTheme(newTheme);
+      setStoreSoundTheme(newTheme);
       playSound('milestone');
       updateLeaderboardStats();
     },
@@ -586,7 +599,11 @@ const setupEvents = () => {
       cancelPendingAdvance();
       stopSpeedRunTimer();
       stopSpeedRun();
-      resetIndex();
+      if (getState().speedRunActive || getState().reviewMode) {
+        resetCurrentIndexOnly();
+      } else {
+        resetIndex();
+      }
       showLevelSelect();
       if (feedbackEl) feedbackEl.textContent = '';
       levelButtons[0]?.focus();
@@ -618,12 +635,20 @@ const setupEvents = () => {
     () => {
       playSound('click');
       cancelPendingAdvance();
-      if (getState().speedRunActive) {
+      if (getState().speedRunActive || lastEndedSpeedRun) {
+        lastEndedSpeedRun = false;
         startSpeedRunLoop();
+      } else if (getState().reviewMode) {
+        if (startReviewMode()) {
+          buildActiveQuestions(getState().currentLevel);
+          showGame();
+        } else {
+          showLevelSelect();
+        }
       } else {
         const level = getState().currentLevel;
-        buildActiveQuestions(level);
         setLevel(level);
+        buildActiveQuestions(level);
         showGame();
       }
     },
@@ -687,20 +712,28 @@ const setupEvents = () => {
   );
 };
 
-const init = () => {
+export const init = () => {
   loadScores();
+  const st = getState();
+  setSoundTheme(st.soundTheme);
   setupEvents();
   updateHud();
   const state = getState();
+  const welcomeModal = document.getElementById('welcome-modal');
   if (state.currentIndex > 0) {
     buildActiveQuestions(state.currentLevel);
     if (state.currentIndex < activeQuestions.length) {
-      const welcomeModal = document.getElementById('welcome-modal');
       welcomeModal?.classList.remove('modal--visible');
+      welcomeModal?.setAttribute('inert', '');
+      welcomeModal?.setAttribute('aria-hidden', 'true');
       showGame();
-    } else {
-      resetIndex();
+      return;
     }
+    resetIndex();
+  }
+  if (welcomeModal && !welcomeModal.classList.contains('modal--visible')) {
+    welcomeModal.setAttribute('inert', '');
+    welcomeModal.setAttribute('aria-hidden', 'true');
   }
 };
 
@@ -722,4 +755,10 @@ export const __teardown = () => {
   document.removeEventListener('DOMContentLoaded', init);
 };
 
-document.addEventListener('DOMContentLoaded', init, { once: true });
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
+}

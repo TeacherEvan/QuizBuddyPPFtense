@@ -212,12 +212,12 @@ describe('App interactivity', () => {
 
   it('resumes the saved in-progress level on reload (init enters the game)', async () => {
     const { setProgress, getState } = await import('./state.js');
-    await loadApp();
 
     // Persist progress like a previous session would have left behind.
     setProgress('easy', 3);
 
-    document.dispatchEvent(new Event('DOMContentLoaded'));
+    const app = await loadApp();
+    app.init();
 
     // init() must detect saved progress and enter the game directly,
     // instead of stopping at the welcome modal.

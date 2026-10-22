@@ -44,39 +44,64 @@
 </section>
 
 <script>
-const COLORS=['#ffffff','#28a745','#dc3545'];        // 0 white, 1 green, 2 red
-const GLYPH=['','👍','🖕'];                            // 0 none, 1 approve, 2 reject/change
-function cycle(btn){
-  let s=parseInt(btn.dataset.s||'0');
-  s=(s+1)%3; btn.dataset.s=s;
-  btn.style.background=COLORS[s];
-  btn.style.color = s===0 ? '#888' : '#fff';
-  btn.textContent = GLYPH[s] || '';
-  btn.title = ['Skip / no change','Approve / keep','Clarify / change'].indexOf('')>=0?['Skip / no change','Approve / keep','Clarify / change'][s]:'';
+const COLORS = ['#ffffff', '#28a745', '#dc3545'];
+const GLYPH = ['', '👍', '🖕'];
+function cycle(btn) {
+  let s = (parseInt(btn.dataset.s || '0', 10) + 1) % 3;
+  btn.dataset.s = s;
+  btn.style.background = COLORS[s];
+  btn.style.color = s === 0 ? '#888' : '#fff';
+  btn.textContent = GLYPH[s];
+  btn.title = ['Skip / no change', 'Approve / keep', 'Clarify / change'][s];
 }
-async function save(btn, repo){
-  const doc=btn.closest('section')||document;
-  const items=[...doc.querySelectorAll('.item')].map(it=>{
-    const b=it.querySelector('.tick'); const s=parseInt(b.dataset.s||'0');
-    return {area:it.dataset.area, status:['skip','approve','change'][s], note:it.querySelector('.note')?it.querySelector('.note').value:''};
+async function save(btn, repo) {
+  const doc = btn.closest('section') || document;
+  const items = [...doc.querySelectorAll('.item')].map((it) => {
+    const b = it.querySelector('.tick');
+    const s = parseInt(b.dataset.s || '0', 10);
+    return {
+      area: it.dataset.area,
+      status: ['skip', 'approve', 'change'][s],
+      note: it.querySelector('.note') ? it.querySelector('.note').value : ''
+    };
   });
-  const meta={repo:repo, generated:'2026-08-15 18:55', group:doc.dataset.group||'',
-              branch:doc.dataset.branch||'', commits:doc.dataset.commits||'', lang:doc.dataset.lang||''};
-  const blob={meta:meta, items:items,
-    compact: items.filter(i=>i.status!=='skip').map(i=>({a:i.area[0],s:i.status[0],n:i.note})),
-    instructions: meta.repo+' plan: execute items marked approve (a); revisit items marked change (c). skip=ignore.'};
-  const name='HERMES_PLAN.ai.json';
-  const text=JSON.stringify(blob,null,2);
-  // write to place of birth via download (file sits in repo root)
-  const a=document.createElement('a');
-  const f=new Blob([text],{type:'application/json'});
-  a.href=URL.createObjectURL(f); a.download=name; a.click();
-  // best-effort: write directly into the repo (place of birth) when the browser allows FS Access
-  if(window.showSaveFilePicker){{
-    try{{ const h=await showSaveFilePicker({{suggestedName:name}}); const w=await h.createWritable(); await w.write(text); await w.close(); }}catch(e){{}}
-  }}
-  try{{ await navigator.clipboard.writeText(text); }}catch(e){{}}
-  btn.textContent='✓ saved '+name+' (clipboard too)'; setTimeout(()=>btn.textContent='Save ▼',2200);
+  const meta = {
+    repo: repo,
+    generated: '2026-08-15 18:55',
+    group: doc.dataset.group || '',
+    branch: doc.dataset.branch || '',
+    commits: doc.dataset.commits || '',
+    lang: doc.dataset.lang || ''
+  };
+  const blob = {
+    meta: meta,
+    items: items,
+    compact: items.filter((i) => i.status !== 'skip').map((i) => ({ a: i.area[0], s: i.status[0], n: i.note })),
+    instructions:
+      meta.repo + ' plan: execute items marked approve (a); revisit items marked change (c). skip=ignore.'
+  };
+  const name = 'HERMES_PLAN.ai.json';
+  const text = JSON.stringify(blob, null, 2);
+  const a = document.createElement('a');
+  const f = new Blob([text], { type: 'application/json' });
+  a.href = URL.createObjectURL(f);
+  a.download = name;
+  a.click();
+  if (window.showSaveFilePicker) {
+    try {
+      const h = await showSaveFilePicker({ suggestedName: name });
+      const w = await h.createWritable();
+      await w.write(text);
+      await w.close();
+    } catch (e) {}
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {}
+  btn.textContent = '✓ saved ' + name + ' (clipboard too)';
+  setTimeout(() => {
+    btn.textContent = 'Save ▼';
+  }, 2200);
 }
 </script>
 

@@ -43,6 +43,28 @@ const state = {
 
 const isNonNegInt = (n) => typeof n === 'number' && Number.isInteger(n) && n >= 0;
 
+const normalizeMistake = (m) => {
+  if (
+    !m ||
+    typeof m.sentence !== 'string' ||
+    !Array.isArray(m.options) ||
+    m.options.length < 1 ||
+    typeof m.correct !== 'string' ||
+    !m.correct.trim()
+  ) {
+    return null;
+  }
+  return {
+    id: typeof m.id === 'string' && m.id ? m.id : `q_${Date.now()}`,
+    sentence: m.sentence,
+    options: m.options.map(String),
+    correct: m.correct,
+    level: LEVELS.includes(m.level) ? m.level : 'easy',
+    tenseCategory: VALID_CATEGORIES.includes(m.tenseCategory) ? m.tenseCategory : 'present',
+    explanation: typeof m.explanation === 'string' ? m.explanation : ''
+  };
+};
+
 const safeParse = (rawValue) => {
   try {
     const parsed = JSON.parse(rawValue);
@@ -75,7 +97,7 @@ const safeParse = (rawValue) => {
         : Math.max(bestStreaks.easy, bestStreaks.medium, bestStreaks.advance);
 
       const mistakes = Array.isArray(parsed.mistakes)
-        ? parsed.mistakes.filter((m) => m && typeof m.id === 'string' && typeof m.sentence === 'string')
+        ? parsed.mistakes.map(normalizeMistake).filter(Boolean)
         : [];
 
       const activeCategoryFilter = VALID_CATEGORIES.includes(parsed.activeCategoryFilter)
@@ -222,6 +244,10 @@ export const resetIndex = () => {
   saveScores();
 };
 
+export const resetCurrentIndexOnly = () => {
+  state.currentIndex = 0;
+};
+
 export const setProgress = (level, index) => {
   if (!LEVELS.includes(level) || !Number.isFinite(index)) return;
   state.progress[level] = Math.max(0, Math.floor(index));
@@ -282,18 +308,22 @@ export const stopSpeedRun = () => {
 };
 
 export const recordMistake = (question) => {
-  if (!question || !question.sentence) return;
-  const exists = state.mistakes.some((m) => m.sentence === question.sentence);
+  if (!question || typeof question.sentence !== 'string') return;
+  const options = Array.isArray(question.options) ? [...question.options] : [];
+  const normalized = normalizeMistake({
+    id: question.id,
+    sentence: question.sentence,
+    options,
+    correct: question.correct || '',
+    level: question.level || state.currentLevel,
+    tenseCategory: question.tenseCategory || 'present',
+    explanation: question.explanation || ''
+  });
+  if (!normalized) return;
+
+  const exists = state.mistakes.some((m) => m.sentence === normalized.sentence);
   if (!exists) {
-    state.mistakes.push({
-      id: question.id || `q_${Date.now()}`,
-      sentence: question.sentence,
-      options: [...question.options],
-      correct: question.correct,
-      level: question.level || state.currentLevel,
-      tenseCategory: question.tenseCategory || 'present',
-      explanation: question.explanation || ''
-    });
+    state.mistakes.push(normalized);
     saveScores();
   }
 };
