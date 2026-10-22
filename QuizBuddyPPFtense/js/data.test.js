@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { QUESTIONS, getQuestionsByLevel, getQuestionsByCategory, getCategories } from './data.js';
+import { QUESTIONS } from './data.js';
 
 const LEVELS = ['easy', 'medium', 'advance'];
 const byLevel = (lvl) => QUESTIONS.filter((q) => q.level === lvl);
@@ -45,13 +45,5 @@ describe('QUESTIONS data integrity', () => {
       const sentences = byLevel(lvl).map((q) => q.sentence);
       expect(new Set(sentences).size).toBe(sentences.length);
     }
-  });
-
-  it('query helpers return expected filtered results', () => {
-    expect(getQuestionsByLevel('easy')).toHaveLength(40);
-    expect(getQuestionsByCategory('past').length).toBeGreaterThan(10);
-    expect(getQuestionsByCategory('present').length).toBeGreaterThan(10);
-    expect(getQuestionsByCategory('future').length).toBeGreaterThan(10);
-    expect(getCategories()).toEqual(['all', 'past', 'present', 'future']);
   });
 });

@@ -10,7 +10,6 @@ import {
   resetIndex,
   recordMistake,
   resolveMistake,
-  clearMistakes,
   startReviewMode,
   exitReviewMode,
   setCategoryFilter,
@@ -210,7 +209,7 @@ describe('mistake tracking, review mode, categories and accessibility state', ()
     expect(getState().mistakes).toHaveLength(1);
     expect(getState().mistakes[0].sentence).toBe('Sentence B');
 
-    clearMistakes();
+    resolveMistake('Sentence B');
     expect(getState().mistakes).toHaveLength(0);
   });
 

@@ -816,9 +816,3 @@ export const QUESTIONS = [
     explanation: 'Future Perfect Continuous: emphasizes an ongoing action leading up to a specific future moment.'
   }
 ];
-
-export const getQuestionsByLevel = (level) => QUESTIONS.filter((q) => q.level === level);
-
-export const getQuestionsByCategory = (cat) => QUESTIONS.filter((q) => q.tenseCategory === cat);
-
-export const getCategories = () => ['all', 'past', 'present', 'future'];

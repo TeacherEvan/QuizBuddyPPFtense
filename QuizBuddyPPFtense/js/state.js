@@ -334,11 +334,6 @@ export const resolveMistake = (sentence) => {
   }
 };
 
-export const clearMistakes = () => {
-  state.mistakes = [];
-  saveScores();
-};
-
 export const startReviewMode = () => {
   if (state.mistakes.length === 0) return false;
   state.reviewMode = true;
